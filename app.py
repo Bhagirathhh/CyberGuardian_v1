@@ -7,6 +7,8 @@ import ipaddress
 import hashlib
 import time
 import json
+import joblib
+from ml.feature_extraction import extract_features
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -24,6 +26,7 @@ except Exception:
 
 
 app = Flask(__name__)
+model = joblib.load("phishing_model.pkl")
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-this-in-production")
 app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(__file__), "uploads")
 app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
@@ -195,6 +198,46 @@ def analyze_url(raw_url: str):
 
     return result, color, score, reasons
 
+def analyze_url_ai(url):
+
+    features = [extract_features(url)]
+
+    prediction = model.predict(features)[0]
+
+    probability = model.predict_proba(features)[0]
+
+    confidence = round(max(probability) * 100)
+
+    reasons = []
+
+    if features[0][4]:
+        reasons.append("✅ HTTPS detected")
+    else:
+        reasons.append("⚠ HTTPS not detected")
+
+    if features[0][6]:
+        reasons.append("⚠ Direct IP Address used")
+
+    if features[0][7]:
+        reasons.append(f"⚠ {features[0][7]} suspicious keyword(s) detected")
+
+    if features[0][8] > 3:
+        reasons.append("⚠ Multiple subdomains detected")
+
+    if prediction == 1:
+        return (
+            "🚨 Phishing Website",
+            "#ef4444",
+            confidence,
+            reasons
+        )
+
+    return (
+        "✅ Safe Website",
+        "#22c55e",
+        100 - confidence,
+        reasons
+    )
 
 def system_audit():
     os_name = f"{platform.system()} {platform.release()}"
@@ -403,7 +446,7 @@ def url_scanner():
 
     if request.method == "POST":
         raw_url = request.form.get("url", "")
-        result, color, score, reasons = analyze_url(raw_url)
+        result, color, score, reasons = analyze_url_ai(raw_url)
 
     return render_template("url_scanner.html", result=result, color=color, score=score, reasons=reasons)
 

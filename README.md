@@ -100,17 +100,16 @@ The objective of Cyber Guardian is to provide a lightweight cybersecurity toolki
 
 Clone the repository:
 
-bash
-
+```bash
 git clone https://github.com/Bhagirathhh/CyberGuardian.git
-
 cd CyberGuardian
-
+```
 
 Install dependencies:
 
-bash
+```bash
 pip install -r requirements.txt
+```
 
 Run the application:
 

@@ -2,3 +2,8 @@ Flask
 psutil
 Werkzeug
 reportlab
+pandas
+scikit-learn
+joblib
+numpy
+scipy
