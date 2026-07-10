@@ -13,9 +13,11 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 import psutil
-from flask import Flask, render_template, request, jsonify, Response, send_file
+from flask import Flask, render_template, request, jsonify, Response, send_file, redirect, url_for, flash, session
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 
 try:
     from reportlab.lib.pagesizes import A4
@@ -26,6 +28,67 @@ except Exception:
 
 
 app = Flask(__name__)
+
+# --- Database Setup ---
+import sqlite3
+
+DATABASE = os.path.join(os.path.dirname(__file__), "cyber_guardian.db")
+
+def get_db():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_db()
+    conn.executescript('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS audit_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            score INTEGER,
+            grade TEXT,
+            os_name TEXT,
+            hostname TEXT,
+            local_ip TEXT,
+            cpu_usage REAL,
+            ram_percent REAL,
+            disk_percent REAL,
+            recommendations TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+        CREATE TABLE IF NOT EXISTS url_scan_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            url TEXT,
+            result TEXT,
+            score INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# --- Login Decorator ---
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash("Please login first!", "warning")
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 model = joblib.load("phishing_model.pkl")
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-this-in-production")
 app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(__file__), "uploads")
@@ -199,13 +262,9 @@ def analyze_url(raw_url: str):
     return result, color, score, reasons
 
 def analyze_url_ai(url):
-
     features = [extract_features(url)]
-
     prediction = model.predict(features)[0]
-
     probability = model.predict_proba(features)[0]
-
     confidence = round(max(probability) * 100)
 
     reasons = []
@@ -225,19 +284,10 @@ def analyze_url_ai(url):
         reasons.append("⚠ Multiple subdomains detected")
 
     if prediction == 1:
-        return (
-            "🚨 Phishing Website",
-            "#ef4444",
-            confidence,
-            reasons
-        )
+        return ("🚨 Phishing Website", "#ef4444", confidence, reasons)
 
-    return (
-        "✅ Safe Website",
-        "#22c55e",
-        100 - confidence,
-        reasons
-    )
+    return ("✅ Safe Website", "#22c55e", 100 - confidence, reasons)
+
 
 def system_audit():
     os_name = f"{platform.system()} {platform.release()}"
@@ -394,6 +444,77 @@ def make_pdf_report(data, out_path):
     return out_path
 
 
+# ===================== AUTH ROUTES =====================
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
+        confirm = request.form.get("confirm_password", "")
+
+        if not username or not email or not password:
+            flash("All fields are required!", "danger")
+            return render_template("register.html")
+
+        if password != confirm:
+            flash("Passwords do not match!", "danger")
+            return render_template("register.html")
+
+        if len(password) < 6:
+            flash("Password must be at least 6 characters!", "danger")
+            return render_template("register.html")
+
+        conn = get_db()
+        try:
+            conn.execute(
+                "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
+                (username, email, generate_password_hash(password))
+            )
+            conn.commit()
+            flash("Registration successful! Please login.", "success")
+            return redirect(url_for("login"))
+        except sqlite3.IntegrityError:
+            flash("Username or email already exists!", "danger")
+        finally:
+            conn.close()
+
+    return render_template("register.html")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        conn = get_db()
+        user = conn.execute(
+            "SELECT * FROM users WHERE username = ?", (username,)
+        ).fetchone()
+        conn.close()
+
+        if user and check_password_hash(user["password_hash"], password):
+            session["user_id"] = user["id"]
+            session["username"] = user["username"]
+            flash(f"Welcome back, {user['username']}!", "success")
+            return redirect(url_for("home"))
+        else:
+            flash("Invalid username or password!", "danger")
+
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("You have been logged out.", "info")
+    return redirect(url_for("login"))
+
+
+# ===================== MAIN ROUTES =====================
+
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -448,13 +569,52 @@ def url_scanner():
         raw_url = request.form.get("url", "")
         result, color, score, reasons = analyze_url_ai(raw_url)
 
+        # Save scan history if logged in
+        if "user_id" in session and result:
+            conn = get_db()
+            conn.execute(
+                "INSERT INTO url_scan_history (user_id, url, result, score) VALUES (?, ?, ?, ?)",
+                (session["user_id"], raw_url, result, score)
+            )
+            conn.commit()
+            conn.close()
+
     return render_template("url_scanner.html", result=result, color=color, score=score, reasons=reasons)
 
 
 @app.route("/audit")
+@login_required
 def audit():
     data = system_audit()
+    # Save to history
+    conn = get_db()
+    conn.execute(
+        """INSERT INTO audit_history 
+           (user_id, score, grade, os_name, hostname, local_ip, cpu_usage, ram_percent, disk_percent, recommendations)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (session["user_id"], data["score"], data["grade"], data["os_name"],
+         data["hostname"], data["local_ip"], data["cpu_usage"],
+         data["ram_percent"], data["disk_percent"], json.dumps(data["recommendations"]))
+    )
+    conn.commit()
+    conn.close()
     return render_template("audit.html", **data)
+
+
+@app.route("/history")
+@login_required
+def history():
+    conn = get_db()
+    audits = conn.execute(
+        "SELECT * FROM audit_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 50",
+        (session["user_id"],)
+    ).fetchall()
+    scans = conn.execute(
+        "SELECT * FROM url_scan_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 50",
+        (session["user_id"],)
+    ).fetchall()
+    conn.close()
+    return render_template("history.html", audits=audits, scans=scans)
 
 
 @app.route("/live-monitor")
@@ -508,12 +668,15 @@ def file_integrity():
 
 
 @app.route("/pdf-report")
+@login_required
 def pdf_report():
     data = system_audit()
     pdf_path = os.path.join(app.config["UPLOAD_FOLDER"], f"audit_report_{int(time.time())}.pdf")
     make_pdf_report(data, pdf_path)
     return send_file(pdf_path, as_attachment=True, download_name="cyber_guardian_report.pdf")
 
+
+# ===================== API ROUTES =====================
 
 @app.route("/api/password", methods=["POST"])
 def api_password():
@@ -534,6 +697,22 @@ def api_url():
 @app.route("/api/audit")
 def api_audit():
     return jsonify(system_audit())
+
+
+@app.route("/api/delete-history", methods=["POST"])
+@login_required
+def delete_history():
+    data = request.get_json(silent=True) or {}
+    record_id = data.get("id")
+    record_type = data.get("type")  # "audit" or "scan"
+    conn = get_db()
+    if record_type == "audit":
+        conn.execute("DELETE FROM audit_history WHERE id = ? AND user_id = ?", (record_id, session["user_id"]))
+    elif record_type == "scan":
+        conn.execute("DELETE FROM url_scan_history WHERE id = ? AND user_id = ?", (record_id, session["user_id"]))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
 
 
 if __name__ == "__main__":

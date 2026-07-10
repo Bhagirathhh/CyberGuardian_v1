@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History - Cyber Guardian</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            color: #fff;
+            padding: 30px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .header h1 {
+            color: #00d4ff;
+            font-size: 28px;
+        }
+        .header h1 span { color: #fff; opacity: 0.6; }
+        .header-links a {
+            color: rgba(255,255,255,0.6);
+            text-decoration: none;
+            margin-left: 20px;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        .header-links a:hover { color: #00d4ff; }
+        .header-links a.active { color: #00d4ff; font-weight: 600; }
+
+        .section-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #00d4ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title .count {
+            background: rgba(0, 212, 255, 0.15);
+            color: #00d4ff;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        .flash-messages { margin-bottom: 20px; }
+        .flash-message {
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            animation: slideIn 0.3s ease;
+        }
+        .flash-message.success { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .flash-message.info { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .table-wrapper {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 40px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        thead {
+            background: rgba(0, 212, 255, 0.1);
+        }
+        th {
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.7);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        td {
+            padding: 14px 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 14px;
+        }
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .grade-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        .grade-A { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+        .grade-B { background: rgba(234, 179, 8, 0.2); color: #facc15; }
+        .grade-C { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        
+        .result-safe { color: #4ade80; }
+        .result-phishing { color: #f87171; }
+        .result-suspicious { color: #facc15; }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(255,255,255,0.4);
+        }
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: rgba(255,255,255,0.5);
+        }
+        .empty-state p { font-size: 14px; }
+
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.15);
+            border: none;
+            color: #f87171;
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+        .timestamp {
+            color: rgba(255,255,255,0.4);
+            font-size: 13px;
+        }
+        @media (max-width: 768px) {
+            body { padding: 15px; }
+            .header { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .header-links a { margin-left: 0; margin-right: 15px; }
+            th, td { padding: 10px 12px; font-size: 13px; }
+            .hide-mobile { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ <span>Activity History</span></h1>
+            <div class="header-links">
+                <a href="{{ url_for('home') }}">🏠 Home</a>
+                <a href="{{ url_for('audit') }}">📊 New Audit</a>
+                <a href="{{ url_for('logout') }}">🚪 Logout</a>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+            <div class="flash-message {{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Audit History -->
+        <div class="section-title">
+            📋 Security Audits <span class="count">{{ audits|length }}</span>
+        </div>
+        <div class="table-wrapper">
+            {% if audits %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Host</th>
+                        <th>Score</th>
+                        <th class="hide-mobile">Grade</th>
+                        <th class="hide-mobile">CPU</th>
+                        <th class="hide-mobile">RAM</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for audit in audits %}
+                    <tr>
+                        <td class="timestamp">{{ audit.created_at[:19] }}</td>
+                        <td>{{ audit.hostname }}</td>
+                        <td>{{ audit.score }}/100</td>
+                        <td class="hide-mobile"><span class="grade-badge grade-{{ audit.grade[0] }}">{{ audit.grade }}</span></td>
+                        <td class="hide-mobile">{{ "%.1f"|format(audit.cpu_usage) }}%</td>
+                        <td class="hide-mobile">{{ "%.1f"|format(audit.ram_percent) }}%</td>
+                        <td>
+                            <button class="btn-delete" onclick="deleteRecord({{ audit.id }}, 'audit')">🗑 Delete</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <h3>📭 No audit history yet</h3>
+                <p>Run a security audit to see it here!</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- URL Scan History -->
+        <div class="section-title">
+            🌐 URL Scans <span class="count">{{ scans|length }}</span>
+        </div>
+        <div class="table-wrapper">
+            {% if scans %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>URL</th>
+                        <th>Result</th>
+                        <th>Score</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for scan in scans %}
+                    <tr>
+                        <td class="timestamp">{{ scan.created_at[:19] }}</td>
+                        <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ scan.url }}</td>
+                        <td>
+                            {% if 'Phishing' in scan.result or 'High' in scan.result %}
+                            <span class="result-phishing">{{ scan.result }}</span>
+                            {% elif 'Safe' in scan.result %}
+                            <span class="result-safe">{{ scan.result }}</span>
+                            {% else %}
+                            <span class="result-suspicious">{{ scan.result }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ scan.score }}%</td>
+                        <td>
+                            <button class="btn-delete" onclick="deleteRecord({{ scan.id }}, 'scan')">🗑 Delete</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <h3>🔍 No URL scans yet</h3>
+                <p>Scan a URL to see results here!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+    function deleteRecord(id, type) {
+        if (!confirm('Delete this record?')) return;
+        fetch('{{ url_for("delete_history") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id, type: type })
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) location.reload();
+        });
+    }
+    </script>
+</body>
+</html>

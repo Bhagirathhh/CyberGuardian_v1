@@ -69,6 +69,116 @@ body::before{
   padding:40px 0 36px;
 }
 
+/* ============= NAVBAR ============= */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  margin-bottom: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  backdrop-filter: blur(14px);
+}
+
+.navbar-brand {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--cyan);
+  text-decoration: none;
+}
+
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.navbar-links a, .navbar-links .nav-btn {
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.25s ease;
+}
+
+.nav-link {
+  color: var(--muted);
+}
+
+.nav-link:hover {
+  color: var(--text);
+  background: rgba(255,255,255,0.06);
+}
+
+.nav-btn-primary {
+  background: linear-gradient(135deg, var(--cyan), var(--blue));
+  color: #fff !important;
+  border: none;
+  cursor: pointer;
+}
+
+.nav-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(6, 182, 212, 0.3);
+}
+
+.nav-btn-outline {
+  border: 1px solid rgba(255,255,255,0.2);
+  color: var(--text);
+}
+
+.nav-btn-outline:hover {
+  border-color: var(--cyan);
+  background: rgba(6, 182, 212, 0.08);
+}
+
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.nav-user .avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--cyan), var(--blue));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.flash-messages {
+  margin-bottom: 16px;
+}
+
+.flash-message {
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  animation: slideIn 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.flash-message.success { background: rgba(34, 197, 94, 0.18); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.25); }
+.flash-message.danger { background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.25); }
+.flash-message.warning { background: rgba(234, 179, 8, 0.18); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.25); }
+.flash-message.info { background: rgba(59, 130, 246, 0.18); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.25); }
+
+@keyframes slideIn{
+  from{ opacity:0; transform:translateY(-10px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
 .hero{
   text-align:center;
   padding:28px 18px 18px;
@@ -232,12 +342,51 @@ h1{
   .card h2{
     font-size:21px;
   }
+  .navbar {
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+  .navbar-links {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 }
 </style>
 </head>
 <body>
 
 <div class="container">
+  <!-- ============= NAVBAR ============= -->
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">🛡️ Cyber Guardian</a>
+    <div class="navbar-links">
+      {% if session.user_id %}
+        <div class="nav-user">
+          <div class="avatar">{{ session.username[0]|upper }}</div>
+          <span>{{ session.username }}</span>
+        </div>
+        <a href="/history" class="nav-link">📋 History</a>
+        <a href="/logout" class="nav-btn nav-btn-outline">🚪 Logout</a>
+      {% else %}
+        <a href="/login" class="nav-btn nav-btn-primary">🔐 Login</a>
+        <a href="/register" class="nav-btn nav-btn-outline">📝 Register</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- ============= FLASH MESSAGES ============= -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-messages">
+    {% for category, message in messages %}
+    <div class="flash-message {{ category }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <!-- ============= HERO ============= -->
   <section class="hero" aria-labelledby="main-title">
     <div class="badge">Cyber Security Dashboard</div>
     <h1 id="main-title">🛡 Cyber Guardian</h1>
@@ -298,6 +447,7 @@ h1{
       </article>
     </a>
 
+    {% if session.user_id %}
     <a class="card-link" href="/audit" aria-label="Open Security Audit">
       <article class="card">
         <div class="icon">🖥️</div>
@@ -305,6 +455,15 @@ h1{
         <p>Inspect system posture with CPU, RAM, disk, OS, Python, and live health indicators.</p>
       </article>
     </a>
+    {% else %}
+    <a class="card-link" href="/login" aria-label="Login to access Security Audit">
+      <article class="card" style="opacity:0.7;">
+        <div class="icon">🔒</div>
+        <h2>Security Audit</h2>
+        <p>Login required — inspect system posture with CPU, RAM, disk, OS, and health indicators.</p>
+      </article>
+    </a>
+    {% endif %}
 
     <a class="card-link" href="/live-monitor" aria-label="Open Live Resource Monitor">
       <article class="card">
@@ -322,6 +481,7 @@ h1{
       </article>
     </a>
 
+    {% if session.user_id %}
     <a class="card-link" href="/pdf-report" aria-label="Download PDF Report">
       <article class="card">
         <div class="icon">📄</div>
@@ -329,6 +489,15 @@ h1{
         <p>Download a formatted security report based on the current audit snapshot.</p>
       </article>
     </a>
+    {% else %}
+    <a class="card-link" href="/login" aria-label="Login to access PDF Report">
+      <article class="card" style="opacity:0.7;">
+        <div class="icon">🔒</div>
+        <h2>PDF Report</h2>
+        <p>Login required — download a formatted security report based on the current audit snapshot.</p>
+      </article>
+    </a>
+    {% endif %}
   </section>
 
   <section class="feature-row" aria-label="Highlights">
