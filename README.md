@@ -60,37 +60,6 @@
 
 ---
 
-## 📸 Module Overview
-
-```
-Cyber Guardian v2.0
-│
-├── 🔐 Authentication (Login / Register / Logout)
-│
-├── 🔧 Core Security Tools
-│   ├── Password Analyzer
-│   ├── Password Generator
-│   ├── Hash Generator
-│   ├── AI URL Scanner
-│   ├── File Integrity Checker
-│   └── Live Resource Monitor
-│
-├── 🖥️ System & Vulnerability Audit
-│   ├── Complete Security Audit
-│   ├── Port Scanner
-│   ├── Firewall Check
-│   ├── Network Connections
-│   ├── Patch Manager
-│   ├── User Audit
-│   ├── Process Scanner
-│   └── Antivirus Status
-│
-├── 📋 Audit History
-│   ├── Audit Report History
-│   └── URL Scan History
-│
-└── 📄 PDF Report Generator
-```
 
 ---
 
