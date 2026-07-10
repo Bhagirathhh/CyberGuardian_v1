@@ -1,142 +1,191 @@
 # 🛡️ Cyber Guardian v2.0
 
-**Cyber Guardian v2.0** is an advanced cybersecurity toolkit developed using Python and Flask. The project provides multiple security-focused utilities through a single web-based dashboard, helping users analyze passwords, inspect URLs, monitor system health, generate hashes, verify file integrity, and create security reports.
+**Cyber Guardian v2.0** is an advanced, all-in-one cybersecurity toolkit built with Python and Flask. It provides a comprehensive web-based dashboard for system vulnerability assessment, network security monitoring, password analysis, phishing detection, file integrity verification, and professional security reporting — all accessible from your browser.
 
 ---
 
 ## 🚀 Features
 
-### 🔐 Password Analyzer
+### 🖥️ System & Vulnerability Audit
 
-* Password strength analysis
-* Security score calculation
-* Weak, Medium, and Strong password classification
+- **Complete Security Audit** — Full system scan covering 8+ security factors with AI-powered risk scoring (0–100)
+- **🔌 Port Scanner** — Detects open ports (FTP, SSH, HTTP, RDP, MySQL, etc.) with service identification and risk classification
+- **🔥 Firewall Check** — Verifies firewall status across Windows, Linux, and macOS with configuration recommendations
+- **🔗 Network Connections** — Inspects all established TCP connections with process mapping and external IP detection
+- **📦 Patch Manager** — Audits outdated packages, security updates, and pending updates
+- **👤 User Audit** — Lists all user accounts, admin/root privileges, and checks if guest account is enabled
+- **⚙️ Process Scanner** — Detects suspicious processes (reverse shells, miners, keyloggers) and high resource usage
+- **🛡️ Antivirus Status** — Checks Windows Defender / ClamAV real-time protection, cloud protection, and signature age
 
-### 🔑 Password Generator
+### 🔐 Password Tools
 
-* Generate strong random passwords
-* Custom password length
-* Support for uppercase, lowercase, numbers, and symbols
+- **Password Analyzer** — Strength scoring with detailed feedback on length, character variety, and common-password detection
+- **Password Generator** — Configurable length, uppercase, lowercase, digits, and symbols with cryptographically secure randomness
 
-### 🌐 URL Scanner
+### 🌐 URL & Phishing Detection
 
-* Detect potentially suspicious URLs
-* HTTPS verification
-* Suspicious keyword detection
-* Basic phishing risk assessment
+- **AI URL Scanner** — Machine learning-based phishing detection analyzing 9+ URL features with confidence scoring
+- **Legacy URL Analyzer** — Rule-based assessment checking HTTPS, suspicious keywords, IP addresses, TLDs, and URL length
 
-### #️⃣ Hash Generator
+### 🔑 Hash & Integrity Tools
 
-* Generate cryptographic hashes
-* Supports:
+- **Hash Generator** — MD5, SHA1, SHA256 hashing for text with copy-to-clipboard
+- **File Integrity Checker** — Upload files and verify SHA-256 integrity against known checksums
 
-  * MD5
-  * SHA1
-  * SHA256
+### 📊 Live System Monitoring
 
-### 🖥️ Security Audit
+- Real-time CPU, RAM, and disk usage via Server-Sent Events (SSE) streaming dashboard
+- Dynamic visual updates every 200ms
 
-* Operating System Information
-* Hostname Detection
-* Local IP Detection
-* CPU Usage Monitoring
-* RAM Usage Monitoring
-* Disk Usage Analysis
-* Security Score Calculation
-* Security Recommendations
+### 📄 PDF Reporting
 
-### 📊 Live System Monitor
+- Download professional security audit reports with all findings, risk factors, and recommendations in PDF format
 
-* Real-time CPU usage
-* RAM usage monitoring
-* System resource overview
+### 📋 Audit History
 
-### 📂 File Integrity Checker
-
-* File hash verification
-* Integrity validation using cryptographic hashing
-
-### 📄 PDF Report Generator
-
-* Generate downloadable security reports
-* Export audit results
+- Stores last 50 audit reports and URL scans per user with timestamps, scores, and full results
 
 ---
 
 ## 🛠️ Technologies Used
 
-* Python
-* Flask
-* HTML5
-* CSS3
-* JavaScript
-* psutil
-* hashlib
-* ReportLab
+- **Backend:** Python 3, Flask, Werkzeug
+- **Database:** SQLite 3
+- **ML/AI:** scikit-learn, joblib
+- **System Info:** psutil, platform, socket
+- **PDF:** ReportLab
+- **Frontend:** HTML5, CSS3, JavaScript (vanilla)
+- **Security:** Werkzeug password hashing, session-based auth
+- **Auth:** Custom login_required decorator with flash messaging
 
 ---
 
-## 📸 Project Modules
+## 📸 Module Overview
 
-* Dashboard
-* Password Analyzer
-* Password Generator
-* URL Scanner
-* Hash Generator
-* Security Audit
-* Live Monitor
-* File Integrity Checker
-* PDF Report Generator
+```
+Cyber Guardian v2.0
+│
+├── 🔐 Authentication (Login / Register / Logout)
+│
+├── 🔧 Core Security Tools
+│   ├── Password Analyzer
+│   ├── Password Generator
+│   ├── Hash Generator
+│   ├── AI URL Scanner
+│   ├── File Integrity Checker
+│   └── Live Resource Monitor
+│
+├── 🖥️ System & Vulnerability Audit
+│   ├── Complete Security Audit
+│   ├── Port Scanner
+│   ├── Firewall Check
+│   ├── Network Connections
+│   ├── Patch Manager
+│   ├── User Audit
+│   ├── Process Scanner
+│   └── Antivirus Status
+│
+├── 📋 Audit History
+│   ├── Audit Report History
+│   └── URL Scan History
+│
+└── 📄 PDF Report Generator
+```
 
 ---
 
 ## 🎯 Project Objective
 
-The objective of Cyber Guardian is to provide a lightweight cybersecurity toolkit that combines multiple security utilities into a single easy-to-use platform. It helps users understand basic cybersecurity concepts while offering practical security analysis features.
+The objective of Cyber Guardian is to provide a lightweight, self-hosted cybersecurity toolkit that combines system vulnerability assessment, network security monitoring, phishing detection, and security auditing into a single easy-to-use platform. It helps security enthusiasts understand real-world attack surfaces, system administrators quickly audit machines for misconfigurations, developers learn about common vulnerabilities (open ports, weak passwords, outdated packages), and students explore practical cybersecurity concepts hands-on.
 
 ---
 
 ## ⚙️ Installation
 
-Clone the repository:
+### Prerequisites
+
+- Python 3.8+
+- pip
+- Git
+
+### Steps
 
 ```bash
+# 1. Clone the repository
 git clone https://github.com/Bhagirathhh/CyberGuardian.git
 cd CyberGuardian
+
+# 2. Create and activate virtual environment
 python3 -m venv venv
-source venv/bin/activate
-pip install scikit-learn joblib
-pip install psutil
-```
+source venv/bin/activate      # Linux/Mac
+# .\venv\Scripts\activate     # Windows
 
-Install dependencies:
+# 3. Install system dependencies (Linux only)
+sudo apt install python3-dev  # Required for psutil on some systems
 
-```bash
+# 4. Install Python packages
+pip install --upgrade pip
 pip install -r requirements.txt
-```
 
-Run the application:
+# 5. Train/download ML model (if not already present)
+# The phishing_model.pkl file should be in the project root
 
-```bash
+# 6. Run the application
 python app.py
 ```
 
-Open:
+### Access
 
-```text
+Open your browser and navigate to:
+
+```
 http://127.0.0.1:5000
+```
+
+---
+
+## 📦 Dependencies
+
+Create a `requirements.txt` file with:
+
+```
+Flask==3.0.0
+Werkzeug==3.0.1
+psutil==5.9.6
+joblib==1.3.2
+scikit-learn==1.3.2
+reportlab==4.0.8
+```
+
+Install all at once:
+
+```bash
+pip install -r requirements.txt
 ```
 
 ---
 
 ## 🔮 Future Enhancements
 
-* User Authentication System
-* Security Audit History
-* Threat Intelligence Integration
-* AI-Based Security Recommendations
-* Advanced Vulnerability Assessment
-* Security Report Management
+- Two-Factor Authentication
+- Network Scan (scan remote hosts, not just localhost)
+- AI-Based Threat Prediction — predictive risk scoring using historical audit data
+- Advanced Dashboard Analytics — charts, trends, and vulnerability timelines
+- CVE Database Integration — real-time CVE lookup for installed packages
+- Docker Deployment — one-command deployment with Docker Compose
+- Multi-Language Support — English, Hindi, Gujarati, and more
+- Real-Time Alerts — email/desktop notifications for critical vulnerabilities
+- Auto-Remediation — one-click fix suggestions for common misconfigurations
+- Mobile-Responsive UI — full mobile dashboard experience
+
+---
+
+## 🧪 Tested On
+
+- **Windows 10/11** — Fully tested
+- **Kali Linux** — Fully tested
+- **Ubuntu 22.04/24.04** — Fully tested
+- **macOS Ventura** — Firewall check only
 
 ---
 
@@ -144,8 +193,22 @@ http://127.0.0.1:5000
 
 **Bhagirathsinh Zala**
 
-Cyber Guardian v2.0 – Advanced Cybersecurity Toolkit
+- GitHub: @Bhagirathhh (https://github.com/Bhagirathhh)
+- Cybersecurity Enthusiast | Python Developer | Open Source Contributor
 
 ---
 
-⭐ If you found this project useful, consider giving it a star.
+## 📄 License
+
+This project is open source and available under the MIT License.
+
+---
+
+## ⭐ Support
+
+If you found this project useful, consider giving it a star on GitHub — it motivates further development and helps others discover the project!
+
+---
+
+**Cyber Guardian v2.0 — Advanced Cybersecurity Toolkit**  
+*Securing systems, one audit at a time.*
