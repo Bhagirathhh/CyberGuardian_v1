@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Process Scanner - Cyber Guardian</title>
+<style>
+:root{
+  --bg1:#020617; --bg2:#0f172a; --bg3:#1e293b;
+  --text:#e2e8f0; --muted:#94a3b8;
+  --cyan:#06b6d4; --green:#22c55e; --red:#ef4444; --amber:#f59e0b;
+}
+*{ margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+body{
+  min-height:100dvh;
+  background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+  color:var(--text); padding:30px;
+}
+.container{ max-width:1000px; margin:0 auto; }
+h1{ font-size:28px; margin-bottom:8px; color:var(--cyan); }
+.subtitle{ color:var(--muted); margin-bottom:24px; }
+.back-link{ display:inline-block; margin-bottom:20px; color:var(--muted); text-decoration:none; }
+.back-link:hover{ color:var(--cyan); }
+.stats-bar{ display:flex; gap:16px; margin-bottom:24px; flex-wrap:wrap; }
+.stat-card{ padding:16px 22px; border-radius:14px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); }
+.stat-card .label{ font-size:13px; color:var(--muted); margin-bottom:4px; }
+.stat-card .value{ font-size:22px; font-weight:700; }
+.loading{ text-align:center; padding:60px; color:var(--muted); }
+.error{ padding:16px; background:rgba(239,68,68,0.12); border-radius:12px; color:var(--red); margin-bottom:16px; }
+.process-card{
+  padding:16px 20px; border-radius:14px;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08);
+  margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;
+}
+.process-card.suspicious{ border-color:rgba(239,68,68,0.3); }
+.process-card.high-resource{ border-color:rgba(245,158,11,0.3); }
+.process-name{ font-weight:600; font-size:16px; }
+.process-pid{ color:var(--muted); font-size:13px; }
+.process-badge{ padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; }
+.process-badge.suspicious{ background:rgba(239,68,68,0.15); color:var(--red); }
+.process-badge.high-cpu{ background:rgba(245,158,11,0.15); color:var(--amber); }
+.no-data{ padding:30px; color:var(--green); text-align:center; }
+.section-title{ font-size:18px; font-weight:600; margin:20px 0 12px; color:var(--cyan); }
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="/" class="back-link">← Back to Dashboard</a>
+  <h1>⚙️ Process Scanner</h1>
+  <p class="subtitle">Detect suspicious processes, reverse shells, miners, and high resource usage</p>
+  
+  <div id="loading" class="loading">Scanning processes...</div>
+  <div id="error" style="display:none;"></div>
+  
+  <div id="content" style="display:none;">
+    <div id="stats" class="stats-bar"></div>
+    
+    <div class="section-title">🚨 Suspicious Processes</div>
+    <div id="suspicious-list"></div>
+    
+    <div class="section-title">⚠️ High Resource Usage</div>
+    <div id="high-resource-list"></div>
+  </div>
+</div>
+
+<script>
+async function loadData(){
+  try{
+    const res = await fetch('/api/security/processes/data');
+    const data = await res.json();
+    
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    
+    if(data.error){
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('error').textContent = '❌ ' + data.error;
+      return;
+    }
+    
+    document.getElementById('stats').innerHTML = `
+      <div class="stat-card"><div class="label">Total Processes</div><div class="value">${data.total_processes || 0}</div></div>
+      <div class="stat-card"><div class="label">Suspicious</div><div class="value" style="color:var(--red);">${data.suspicious_count || 0}</div></div>
+      <div class="stat-card"><div class="label">High Resource</div><div class="value" style="color:var(--amber);">${data.high_resource_count || 0}</div></div>
+    `;
+    
+    // Suspicious
+    const susContainer = document.getElementById('suspicious-list');
+    const sus = data.suspicious || [];
+    if(sus.length === 0){
+      susContainer.innerHTML = '<div class="no-data">✅ No suspicious processes detected</div>';
+    } else {
+      sus.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'process-card suspicious';
+        div.innerHTML = `
+          <div>
+            <div class="process-name">${p.name || p.process || 'Unknown'}</div>
+            <div class="process-pid">PID: ${p.pid || 'N/A'} | CPU: ${p.cpu || 0}% | RAM: ${p.memory || p.ram || 0}MB</div>
+          </div>
+          <span class="process-badge suspicious">⚠️ SUSPICIOUS</span>
+        `;
+        susContainer.appendChild(div);
+      });
+    }
+    
+    // High Resource
+    const hrContainer = document.getElementById('high-resource-list');
+    const hr = data.high_resource || [];
+    if(hr.length === 0){
+      hrContainer.innerHTML = '<div class="no-data">✅ No high-resource processes detected</div>';
+    } else {
+      hr.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'process-card high-resource';
+        div.innerHTML = `
+          <div>
+            <div class="process-name">${p.name || p.process || 'Unknown'}</div>
+            <div class="process-pid">PID: ${p.pid || 'N/A'} | CPU: ${p.cpu || 0}% | RAM: ${p.memory || p.ram || 0}MB</div>
+          </div>
+          <span class="process-badge high-cpu">🔴 HIGH CPU</span>
+        `;
+        hrContainer.appendChild(div);
+      });
+    }
+  } catch(e){
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = '❌ Failed to load process data: ' + e.message;
+  }
+}
+loadData();
+</script>
+</body>
+</html>

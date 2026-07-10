@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Audit - Cyber Guardian</title>
+<style>
+:root{
+  --bg1:#020617; --bg2:#0f172a; --bg3:#1e293b;
+  --text:#e2e8f0; --muted:#94a3b8;
+  --cyan:#06b6d4; --green:#22c55e; --red:#ef4444; --amber:#f59e0b;
+}
+*{ margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+body{
+  min-height:100dvh;
+  background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+  color:var(--text); padding:30px;
+}
+.container{ max-width:900px; margin:0 auto; }
+h1{ font-size:28px; margin-bottom:20px; color:var(--cyan); }
+.back-link{ display:inline-block; margin-bottom:20px; color:var(--muted); text-decoration:none; }
+.back-link:hover{ color:var(--cyan); }
+.loading{ text-align:center; padding:60px; color:var(--muted); }
+.error{ padding:16px; background:rgba(239,68,68,0.12); border-radius:12px; color:var(--red); margin-bottom:16px; }
+table{ width:100%; border-collapse:collapse; }
+th, td{ padding:14px 18px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.06); }
+th{ color:var(--muted); font-weight:500; font-size:13px; text-transform:uppercase; }
+.role-badge{ display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; }
+.role-badge.admin{ background:rgba(239,68,68,0.15); color:var(--red); }
+.role-badge.user{ background:rgba(6,182,212,0.15); color:var(--cyan); }
+.role-badge.guest{ background:rgba(245,158,11,0.15); color:var(--amber); }
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="/" class="back-link">← Back to Dashboard</a>
+  <h1>👤 User Accounts Audit</h1>
+  <div id="loading" class="loading">Loading user accounts...</div>
+  <div id="error" style="display:none;"></div>
+  <table id="users-table" style="display:none;">
+    <thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Last Login</th></tr></thead>
+    <tbody id="users-body"></tbody>
+  </table>
+</div>
+
+<script>
+async function loadData(){
+  try{
+    const res = await fetch('/api/security/users/data');
+    const data = await res.json();
+    
+    document.getElementById('loading').style.display = 'none';
+    
+    if(data.error){
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('error').textContent = '❌ ' + data.error;
+      return;
+    }
+    
+    const table = document.getElementById('users-table');
+    const tbody = document.getElementById('users-body');
+    table.style.display = 'table';
+    
+    const users = data.users || data || [];
+    (Array.isArray(users) ? users : Object.values(users)).forEach(u => {
+      const tr = document.createElement('tr');
+      const role = (u.role || u.type || 'user').toLowerCase();
+      tr.innerHTML = `
+        <td><strong>${u.username || u.name || 'Unknown'}</strong></td>
+        <td><span class="role-badge ${role}">${role.toUpperCase()}</span></td>
+        <td>${u.status || u.enabled ? '✅ Active' : '🔴 Disabled'}</td>
+        <td>${u.last_login || u.lastLogon || 'N/A'}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch(e){
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = '❌ Failed to load user data: ' + e.message;
+  }
+}
+loadData();
+</script>
+</body>
+</html>

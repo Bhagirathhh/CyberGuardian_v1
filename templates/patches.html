@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patch Manager - Cyber Guardian</title>
+<style>
+:root{
+  --bg1:#020617; --bg2:#0f172a; --bg3:#1e293b;
+  --text:#e2e8f0; --muted:#94a3b8;
+  --cyan:#06b6d4; --green:#22c55e; --red:#ef4444; --amber:#f59e0b;
+}
+*{ margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+body{
+  min-height:100dvh;
+  background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+  color:var(--text); padding:30px;
+}
+.container{ max-width:950px; margin:0 auto; }
+h1{ font-size:28px; margin-bottom:20px; color:var(--cyan); }
+.back-link{ display:inline-block; margin-bottom:20px; color:var(--muted); text-decoration:none; }
+.back-link:hover{ color:var(--cyan); }
+.loading{ text-align:center; padding:60px; color:var(--muted); }
+.error{ padding:16px; background:rgba(239,68,68,0.12); border-radius:12px; color:var(--red); margin-bottom:16px; }
+.patch-grid{ display:grid; gap:14px; }
+.patch-card{
+  padding:18px 22px; border-radius:14px;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08);
+  display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;
+}
+.patch-name{ font-weight:600; font-size:16px; }
+.patch-status{ font-size:13px; padding:4px 12px; border-radius:999px; font-weight:600; }
+.patch-status.critical{ background:rgba(239,68,68,0.15); color:var(--red); }
+.patch-status.important{ background:rgba(245,158,11,0.15); color:var(--amber); }
+.patch-status.moderate{ background:rgba(6,182,212,0.15); color:var(--cyan); }
+.patch-status.installed{ background:rgba(34,197,94,0.15); color:var(--green); }
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="/" class="back-link">← Back to Dashboard</a>
+  <h1>📦 Patch Manager</h1>
+  <div id="loading" class="loading">Loading patch information...</div>
+  <div id="error" style="display:none;"></div>
+  <div id="patches" class="patch-grid" style="display:none;"></div>
+</div>
+
+<script>
+async function loadData(){
+  try{
+    const res = await fetch('/api/security/patches/data');
+    const data = await res.json();
+    
+    document.getElementById('loading').style.display = 'none';
+    
+    if(data.error){
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('error').textContent = '❌ ' + data.error;
+      return;
+    }
+    
+    const container = document.getElementById('patches');
+    container.style.display = 'grid';
+    
+    const patches = data.patches || data.updates || data || [];
+    if(Array.isArray(patches) && patches.length === 0){
+      container.innerHTML = '<p style="color:var(--green);">✅ All patches are up to date.</p>';
+      return;
+    }
+    
+    // Handle both array and object responses
+    const items = Array.isArray(patches) ? patches : Object.entries(patches).map(([k,v]) => ({name: k, ...v}));
+    
+    items.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'patch-card';
+      const name = p.name || p.package || p.title || 'Unknown';
+      const status = (p.status || p.severity || 'moderate').toLowerCase();
+      div.innerHTML = `
+        <div>
+          <div class="patch-name">${name}</div>
+          <div style="color:var(--muted);font-size:13px;margin-top:4px;">${p.description || p.version || ''}</div>
+        </div>
+        <span class="patch-status ${status}">${status.toUpperCase()}</span>
+      `;
+      container.appendChild(div);
+    });
+  } catch(e){
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = '❌ Failed to load patch data: ' + e.message;
+  }
+}
+loadData();
+</script>
+</body>
+</html>

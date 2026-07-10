@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Firewall Check - Cyber Guardian</title>
+<style>
+:root{
+  --bg1:#020617; --bg2:#0f172a; --bg3:#1e293b;
+  --text:#e2e8f0; --muted:#94a3b8;
+  --cyan:#06b6d4; --green:#22c55e; --red:#ef4444;
+}
+*{ margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+body{
+  min-height:100dvh;
+  background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+  color:var(--text); padding:30px;
+}
+.container{ max-width:700px; margin:80px auto; text-align:center; }
+h1{ font-size:28px; margin-bottom:20px; color:var(--cyan); }
+.back-link{
+  display:inline-block; margin-bottom:30px; color:var(--muted);
+  text-decoration:none; transition:0.2s;
+}
+.back-link:hover{ color:var(--cyan); }
+.status-card{
+  padding:40px; border-radius:22px;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08);
+  backdrop-filter:blur(14px);
+}
+.status-icon{ font-size:60px; margin-bottom:16px; }
+.status-label{ font-size:22px; font-weight:700; margin-bottom:8px; }
+.status-desc{ color:var(--muted); font-size:15px; }
+.loading{ padding:60px; color:var(--muted); font-size:18px; }
+.error{ padding:16px; background:rgba(239,68,68,0.12); border-radius:12px; color:var(--red); margin-top:16px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="/" class="back-link">← Back to Dashboard</a>
+  <h1>🔥 Firewall Status</h1>
+  <div id="loading" class="loading">Checking firewall status...</div>
+  <div id="status-card" class="status-card" style="display:none;">
+    <div id="status-icon" class="status-icon">🛡️</div>
+    <div id="status-label" class="status-label"></div>
+    <div id="status-desc" class="status-desc"></div>
+  </div>
+  <div id="error" style="display:none;"></div>
+</div>
+
+<script>
+async function loadData(){
+  try{
+    const res = await fetch('/api/security/firewall/data');
+    const data = await res.json();
+    
+    document.getElementById('loading').style.display = 'none';
+    
+    if(data.error){
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('error').textContent = '❌ ' + data.error;
+      return;
+    }
+    
+    const card = document.getElementById('status-card');
+    const icon = document.getElementById('status-icon');
+    const label = document.getElementById('status-label');
+    const desc = document.getElementById('status-desc');
+    
+    card.style.display = 'block';
+    
+    if(data.status && data.status.toLowerCase().includes('active')){
+      icon.textContent = '🛡️';
+      label.textContent = data.status;
+      label.style.color = 'var(--green)';
+      desc.textContent = 'Your firewall is active and protecting your system.';
+    } else {
+      icon.textContent = '⚠️';
+      label.textContent = data.status || 'Inactive';
+      label.style.color = 'var(--red)';
+      desc.textContent = 'Your firewall may be disabled. Enable it to protect your system.';
+    }
+  } catch(e){
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = '❌ Failed to load firewall data: ' + e.message;
+  }
+}
+loadData();
+</script>
+</body>
+</html>

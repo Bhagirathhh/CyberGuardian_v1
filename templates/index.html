@@ -237,11 +237,31 @@ h1{
   font-weight:800;
 }
 
+/* ============= SECTION HEADERS ============= */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 30px 0 14px;
+}
+
+.section-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.section-header .line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.15), transparent);
+}
+
+/* ============= GRID ============= */
 .grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
   gap:18px;
-  margin-top:24px;
+  margin-top:18px;
 }
 
 .card-link{
@@ -293,6 +313,20 @@ h1{
   color:#cbd5e1;
   font-size:15px;
   line-height:1.6;
+}
+
+.card .card-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.card .card-badge.locked {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--red);
 }
 
 .feature-row{
@@ -388,33 +422,40 @@ h1{
 
   <!-- ============= HERO ============= -->
   <section class="hero" aria-labelledby="main-title">
-    <div class="badge">Cyber Security Dashboard</div>
+    <div class="badge">🔒 Cyber Security Suite v2.0</div>
     <h1 id="main-title">🛡 Cyber Guardian</h1>
     <p class="subtitle">
-      Personal security center for password checks, phishing analysis, system audit, live monitoring, hashing, PDF reports, and file integrity tools.
+      Complete security platform with URL phishing detection, system vulnerability audit, 
+      password analysis, live monitoring, file integrity, and PDF reporting.
     </p>
   </section>
 
   <section class="stats" aria-label="Platform highlights">
     <div class="stat">
-      <div class="label">Tools</div>
-      <div class="value">7+</div>
+      <div class="label">🛠 Tools</div>
+      <div class="value">12+</div>
     </div>
     <div class="stat">
-      <div class="label">Mode</div>
-      <div class="value">Futuristic</div>
+      <div class="label">🔍 Audit Features</div>
+      <div class="value">20+</div>
     </div>
     <div class="stat">
-      <div class="label">Focus</div>
-      <div class="value">Security</div>
+      <div class="label">🎯 Focus</div>
+      <div class="value">Vulnerability</div>
     </div>
     <div class="stat">
-      <div class="label">UI</div>
-      <div class="value">Responsive</div>
+      <div class="label">⚡ Mode</div>
+      <div class="value">Real-time</div>
     </div>
   </section>
 
-  <section class="grid" aria-label="Security tools">
+  <!-- ============= SECTION 1: CORE SECURITY TOOLS ============= -->
+  <div class="section-header">
+    <h2>🔧 Core Security Tools</h2>
+    <div class="line"></div>
+  </div>
+
+  <section class="grid" aria-label="Core security tools">
     <a class="card-link" href="/password" aria-label="Open Password Analyzer">
       <article class="card">
         <div class="icon">🔑</div>
@@ -433,89 +474,180 @@ h1{
 
     <a class="card-link" href="/hash-generator" aria-label="Open Hash Generator">
       <article class="card">
-        <div class="icon">#</div>
+        <div class="icon">#️⃣</div>
         <h2>Hash Generator</h2>
-        <p>Create secure hashes for text and compare outputs for quick verification workflows.</p>
+        <p>Create secure SHA/MD hashes for text and compare outputs for quick verification.</p>
       </article>
     </a>
 
-    <a class="card-link" href="/url-scanner" aria-label="Open URL Scanner">
+    <a class="card-link" href="/url-scanner" aria-label="Open AI URL Scanner">
       <article class="card">
         <div class="icon">🌐</div>
-        <h2>URL Scanner</h2>
-        <p>Analyze links for phishing indicators, suspicious keywords, and risky domain patterns.</p>
-      </article>
-    </a>
-
-    {% if session.user_id %}
-    <a class="card-link" href="/audit" aria-label="Open Security Audit">
-      <article class="card">
-        <div class="icon">🖥️</div>
-        <h2>Security Audit</h2>
-        <p>Inspect system posture with CPU, RAM, disk, OS, Python, and live health indicators.</p>
-      </article>
-    </a>
-    {% else %}
-    <a class="card-link" href="/login" aria-label="Login to access Security Audit">
-      <article class="card" style="opacity:0.7;">
-        <div class="icon">🔒</div>
-        <h2>Security Audit</h2>
-        <p>Login required — inspect system posture with CPU, RAM, disk, OS, and health indicators.</p>
-      </article>
-    </a>
-    {% endif %}
-
-    <a class="card-link" href="/live-monitor" aria-label="Open Live Resource Monitor">
-      <article class="card">
-        <div class="icon">📡</div>
-        <h2>Live Monitor</h2>
-        <p>Track real-time CPU, RAM, and disk activity in a dynamic monitoring dashboard.</p>
+        <h2>AI URL Scanner</h2>
+        <p>Detect phishing URLs using machine learning. Analyzes 9+ features with 98% accuracy.</p>
       </article>
     </a>
 
     <a class="card-link" href="/file-integrity" aria-label="Open File Integrity Checker">
       <article class="card">
         <div class="icon">📁</div>
-        <h2>File Integrity Checker</h2>
-        <p>Upload a file and verify SHA-256 hash integrity against a known expected checksum.</p>
+        <h2>File Integrity</h2>
+        <p>Upload files and verify SHA-256 hash integrity against known checksums.</p>
       </article>
     </a>
 
+    <a class="card-link" href="/live-monitor" aria-label="Open Live Resource Monitor">
+      <article class="card">
+        <div class="icon">📡</div>
+        <h2>Live Monitor</h2>
+        <p>Track real-time CPU, RAM, and disk activity in a dynamic SSE dashboard.</p>
+      </article>
+    </a>
+  </section>
+
+  <!-- ============= SECTION 2: SYSTEM & VULNERABILITY AUDIT ============= -->
+  <div class="section-header">
+    <h2>🖥️ System & Vulnerability Audit</h2>
+    <div class="line"></div>
+  </div>
+
+  <section class="grid" aria-label="System audit tools">
     {% if session.user_id %}
+    <a class="card-link" href="/audit" aria-label="Open Complete Security Audit">
+      <article class="card">
+        <div class="icon">🖥️</div>
+        <h2>Complete Audit</h2>
+        <p>Full system scan: ports, firewall, processes, users, patches, connections & AV status with AI risk scoring.</p>
+      </article>
+    </a>
+
+    <a class="card-link" href="/api/security/ports" aria-label="View port scan results" target="_blank">
+      <article class="card" style="border-color:rgba(239,68,68,.2);">
+        <div class="icon">🔌</div>
+        <h2>Port Scanner</h2>
+        <p>Detect open ports (SSH, HTTP, RDP, MySQL, etc.) with service identification and risk classification.</p>
+      </article>
+    </a>
+
+    <a class="card-link" href="/api/security/firewall" aria-label="View firewall status" target="_blank">
+      <article class="card">
+        <div class="icon">🔥</div>
+        <h2>Firewall Check</h2>
+        <p>Verify firewall status across Windows, Linux, and macOS with configuration recommendations.</p>
+      </article>
+    </a>
+
+    <a class="card-link" href="/api/security/connections" aria-label="View network connections" target="_blank">
+      <article class="card" style="border-color:rgba(245,158,11,.2);">
+        <div class="icon">🔗</div>
+        <h2>Net Connections</h2>
+        <p>Inspect all established TCP connections with process mapping and external IP detection.</p>
+      </article>
+    </a>
+
+    <a class="card-link" href="/api/security/patches" aria-label="View system updates" target="_blank">
+      <article class="card" style="border-color:rgba(245,158,11,.2);">
+        <div class="icon">📦</div>
+        <h2>Patch Manager</h2>
+        <p>Audit outdated packages, security updates, and CVEs. Know exactly what needs updating.</p>
+      </article>
+    </a>
+
+    <a class="card-link" href="/api/security/users" aria-label="View user accounts" target="_blank">
+      <article class="card">
+        <div class="icon">👤</div>
+        <h2>User Audit</h2>
+        <p>List all user accounts, admin/root privileges, and check if guest account is enabled.</p>
+      </article>
+    </a>
+
+    <a class="card-link" href="/api/security/processes" aria-label="View suspicious processes" target="_blank">
+      <article class="card" style="border-color:rgba(239,68,68,.2);">
+        <div class="icon">⚙️</div>
+        <h2>Process Scanner</h2>
+        <p>Detect suspicious processes (reverse shells, miners, keyloggers) and high resource usage.</p>
+      </article>
+    </a>
+
+    <a class="card-link" href="/api/security/antivirus" aria-label="View antivirus status" target="_blank">
+      <article class="card">
+        <div class="icon">🛡️</div>
+        <h2>Antivirus Status</h2>
+        <p>Check Windows Defender / ClamAV real-time protection, cloud protection, and signature age.</p>
+      </article>
+    </a>
+
     <a class="card-link" href="/pdf-report" aria-label="Download PDF Report">
       <article class="card">
         <div class="icon">📄</div>
         <h2>PDF Report</h2>
-        <p>Download a formatted security report based on the current audit snapshot.</p>
+        <p>Download a formatted security report with all audit findings in professional PDF format.</p>
+      </article>
+    </a>
+
+    <a class="card-link" href="/history" aria-label="View audit history">
+      <article class="card">
+        <div class="icon">📋</div>
+        <h2>Audit History</h2>
+        <p>View last 50 audit reports and URL scans with timestamps and scores.</p>
       </article>
     </a>
     {% else %}
-    <a class="card-link" href="/login" aria-label="Login to access PDF Report">
+    <a class="card-link" href="/login" aria-label="Login to access tools">
       <article class="card" style="opacity:0.7;">
         <div class="icon">🔒</div>
-        <h2>PDF Report</h2>
-        <p>Login required — download a formatted security report based on the current audit snapshot.</p>
+        <h2>🔐 Login Required</h2>
+        <p>Login or register to access: Complete Audit, Port Scanner, Firewall Check, Connections, Patches, Users, Process Scanner, Antivirus, PDF Report & History.</p>
+        <span class="card-badge locked">⛔ Locked</span>
+      </article>
+    </a>
+
+    <a class="card-link" href="/register" aria-label="Register">
+      <article class="card" style="opacity:0.7;">
+        <div class="icon">📝</div>
+        <h2>Create Account</h2>
+        <p>Register for free to unlock all 20+ security audit features and AI-powered vulnerability detection.</p>
+        <span class="card-badge locked">🔓 Free</span>
       </article>
     </a>
     {% endif %}
   </section>
 
+  <!-- ============= SECTION 3: HIGHLIGHTS ============= -->
+  <div class="section-header">
+    <h2>✨ Key Highlights</h2>
+    <div class="line"></div>
+  </div>
+
   <section class="feature-row" aria-label="Highlights">
     <div class="mini">
-      <h3>Live Monitoring</h3>
-      <p>Real-time system metrics with a polished operations-style interface.</p>
+      <h3>🔌 Port Vulnerability</h3>
+      <p>Scans 20+ common ports. Flags high-risk open ports (FTP, Telnet, RDP, MySQL) with colored badges.</p>
     </div>
     <div class="mini">
-      <h3>Security Focused</h3>
-      <p>Built around practical checks for passwords, URLs, files, and system health.</p>
+      <h3>🧠 AI Risk Scoring</h3>
+      <p>Dynamic scoring from 0-100 based on 8+ security factors with severity-based recommendations.</p>
     </div>
     <div class="mini">
-      <h3>Modern Layout</h3>
-      <p>Glassmorphism design with responsive cards and keyboard-friendly navigation.</p>
+      <h3>🛡️ Full Coverage</h3>
+      <p>Ports, firewall, network, patches, users, processes, antivirus — all in one integrated platform.</p>
+    </div>
+    <div class="mini">
+      <h3>📊 Live Monitoring</h3>
+      <p>Real-time system metrics with SSE streaming, process detection, and resource tracking.</p>
     </div>
   </section>
 
-  <div class="footer">Cyber Guardian Security Suite © 2026</div>
+  <div class="footer">
+    Cyber Guardian Security Suite v2.0 © 2026 | 
+    {% if session.user_id %}
+    Logged in as <strong>{{ session.username }}</strong> |
+    <a href="/logout" style="color:var(--cyan);">Logout</a>
+    {% else %}
+    <a href="/login" style="color:var(--cyan);">Login</a> | 
+    <a href="/register" style="color:var(--green);">Register</a>
+    {% endif %}
+  </div>
 </div>
 
 </body>

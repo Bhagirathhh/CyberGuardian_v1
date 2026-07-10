@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Antivirus Status - Cyber Guardian</title>
+<style>
+:root{
+  --bg1:#020617; --bg2:#0f172a; --bg3:#1e293b;
+  --text:#e2e8f0; --muted:#94a3b8;
+  --cyan:#06b6d4; --green:#22c55e; --red:#ef4444; --amber:#f59e0b;
+}
+*{ margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+body{
+  min-height:100dvh;
+  background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+  color:var(--text); padding:30px;
+}
+.container{ max-width:700px; margin:80px auto; text-align:center; }
+h1{ font-size:28px; margin-bottom:20px; color:var(--cyan); }
+.back-link{ display:inline-block; margin-bottom:30px; color:var(--muted); text-decoration:none; }
+.back-link:hover{ color:var(--cyan); }
+.loading{ padding:60px; color:var(--muted); font-size:18px; }
+.error{ padding:16px; background:rgba(239,68,68,0.12); border-radius:12px; color:var(--red); margin-bottom:16px; }
+.grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:20px; }
+.status-card{
+  padding:30px; border-radius:18px;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08);
+  backdrop-filter:blur(14px);
+}
+.status-icon{ font-size:50px; margin-bottom:12px; }
+.status-label{ font-size:18px; font-weight:700; margin-bottom:4px; }
+.status-detail{ font-size:14px; color:var(--muted); }
+.detail-card{
+  padding:20px; border-radius:14px;
+  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06);
+  text-align:left;
+}
+.detail-card .row{ display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.detail-card .row:last-child{ border-bottom:none; }
+.detail-card .row .key{ color:var(--muted); font-size:14px; }
+.detail-card .row .val{ font-weight:600; font-size:14px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="/" class="back-link">← Back to Dashboard</a>
+  <h1>🛡️ Antivirus Status</h1>
+  <div id="loading" class="loading">Checking antivirus status...</div>
+  <div id="error" style="display:none;"></div>
+  <div id="content" style="display:none;">
+    <div class="grid-2">
+      <div class="status-card">
+        <div id="av-icon" class="status-icon">🛡️</div>
+        <div id="av-label" class="status-label">Checking...</div>
+        <div id="av-detail" class="status-detail"></div>
+      </div>
+      <div class="detail-card" id="av-details"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function loadData(){
+  try{
+    const res = await fetch('/api/security/antivirus/data');
+    const data = await res.json();
+    
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    
+    if(data.error){
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('error').textContent = '❌ ' + data.error;
+      return;
+    }
+    
+    const status = data.status || data.protection || 'Unknown';
+    const isActive = status.toLowerCase().includes('active') || status.toLowerCase().includes('enabled');
+    
+    document.getElementById('av-icon').textContent = isActive ? '🛡️' : '⚠️';
+    document.getElementById('av-label').textContent = data.product || data.name || 'Antivirus';
+    document.getElementById('av-label').style.color = isActive ? 'var(--green)' : 'var(--red)';
+    document.getElementById('av-detail').textContent = status;
+    
+    const details = document.getElementById('av-details');
+    const rows = [
+      {key: 'Real-time Protection', val: data.real_time || data.realtime || status},
+      {key: 'Signature Version', val: data.signature_version || data.version || 'N/A'},
+      {key: 'Last Update', val: data.last_update || data.lastUpdated || 'N/A'},
+      {key: 'Cloud Protection', val: data.cloud_protection || data.cloudProtection || 'N/A'},
+    ];
+    details.innerHTML = rows.map(r => `<div class="row"><span class="key">${r.key}</span><span class="val">${r.val}</span></div>`).join('');
+    
+  } catch(e){
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = '❌ Failed to load antivirus data: ' + e.message;
+  }
+}
+loadData();
+</script>
+</body>
+</html>

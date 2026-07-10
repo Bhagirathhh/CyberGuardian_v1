@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Connections - Cyber Guardian</title>
+<style>
+:root{
+  --bg1:#020617; --bg2:#0f172a; --bg3:#1e293b;
+  --text:#e2e8f0; --muted:#94a3b8;
+  --cyan:#06b6d4; --blue:#3b82f6; --green:#22c55e; --red:#ef4444;
+}
+*{ margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+body{
+  min-height:100dvh;
+  background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+  color:var(--text); padding:30px;
+}
+.container{ max-width:1100px; margin:0 auto; }
+h1{ font-size:28px; margin-bottom:8px; color:var(--cyan); }
+.subtitle{ color:var(--muted); margin-bottom:24px; }
+.back-link{
+  display:inline-block; margin-bottom:20px; color:var(--muted);
+  text-decoration:none; transition:0.2s;
+}
+.back-link:hover{ color:var(--cyan); }
+.stats-bar{
+  display:flex; gap:16px; margin-bottom:24px; flex-wrap:wrap;
+}
+.stat-card{
+  padding:16px 22px; border-radius:14px;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08);
+}
+.stat-card .label{ font-size:13px; color:var(--muted); margin-bottom:4px; }
+.stat-card .value{ font-size:22px; font-weight:700; }
+table{ width:100%; border-collapse:collapse; margin-top:8px; }
+th, td{ padding:12px 14px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.06); font-size:14px; }
+th{ color:var(--muted); font-weight:500; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; }
+.status-badge{ display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; }
+.status-badge.established{ background:rgba(34,197,94,0.12); color:var(--green); }
+.status-badge.listen{ background:rgba(6,182,212,0.12); color:var(--cyan); }
+.status-badge.time_wait{ background:rgba(245,158,11,0.12); color:var(--amber); }
+.loading{ text-align:center; padding:60px; color:var(--muted); }
+.error{ padding:16px; background:rgba(239,68,68,0.12); border-radius:12px; color:var(--red); margin-bottom:16px; }
+.search-box{
+  width:100%; padding:12px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.04); color:var(--text); font-size:14px; margin-bottom:16px;
+  outline:none; transition:0.2s;
+}
+.search-box:focus{ border-color:var(--cyan); }
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="/" class="back-link">← Back to Dashboard</a>
+  <h1>🔗 Network Connections</h1>
+  <p class="subtitle">All established TCP connections with process mapping</p>
+  
+  <div id="loading" class="loading">Fetching connections...</div>
+  <div id="error" style="display:none;"></div>
+  
+  <div id="content" style="display:none;">
+    <div id="stats" class="stats-bar"></div>
+    <input type="text" id="search" class="search-box" placeholder="🔍 Filter by process name, IP, or port..." oninput="filterTable()">
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>PID</th><th>Process</th><th>Local</th><th>Remote</th><th>Status</th></tr></thead>
+        <tbody id="conn-body"></tbody>
+      </table>
+    </div>
+    <p id="no-results" style="display:none; padding:30px; color:var(--muted); text-align:center;">No connections match your filter.</p>
+  </div>
+</div>
+
+<script>
+let allConnections = [];
+
+async function loadData(){
+  try{
+    const res = await fetch('/api/security/connections/data');
+    const data = await res.json();
+    
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    
+    if(data.error){
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('error').textContent = '❌ ' + data.error;
+      return;
+    }
+    
+    allConnections = data.connections || [];
+    
+    document.getElementById('stats').innerHTML = `
+      <div class="stat-card"><div class="label">Total Connections</div><div class="value">${allConnections.length}</div></div>
+    `;
+    
+    renderTable(allConnections);
+  } catch(e){
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = '❌ Failed to load connections: ' + e.message;
+  }
+}
+
+function renderTable(conns){
+  const tbody = document.getElementById('conn-body');
+  const noResults = document.getElementById('no-results');
+  tbody.innerHTML = '';
+  
+  if(conns.length === 0){
+    noResults.style.display = 'block';
+    return;
+  }
+  noResults.style.display = 'none';
+  
+  conns.forEach(c => {
+    const tr = document.createElement('tr');
+    const statusClass = c.status ? c.status.toLowerCase().replace(/_/g, '_') : '';
+    tr.innerHTML = `
+      <td>${c.pid}</td>
+      <td><strong>${c.name}</strong></td>
+      <td>${c.local}</td>
+      <td>${c.remote}</td>
+      <td><span class="status-badge ${statusClass}">${c.status || 'Unknown'}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function filterTable(){
+  const q = document.getElementById('search').value.toLowerCase();
+  const filtered = allConnections.filter(c => 
+    c.name.toLowerCase().includes(q) ||
+    c.local.toLowerCase().includes(q) ||
+    c.remote.toLowerCase().includes(q) ||
+    c.status.toLowerCase().includes(q) ||
+    String(c.pid).includes(q)
+  );
+  renderTable(filtered);
+}
+
+loadData();
+</script>
+</body>
+</html>

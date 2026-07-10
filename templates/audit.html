@@ -161,6 +161,23 @@ h1{
 .section h3{
   margin-bottom:14px;
   font-size:19px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.section h3 .badge{
+  font-size:12px;
+  padding:3px 10px;
+  border-radius:999px;
+  background:rgba(239,68,68,.2);
+  color:var(--red);
+  font-weight:600;
+}
+
+.section h3 .badge.safe{
+  background:rgba(34,197,94,.2);
+  color:var(--green);
 }
 
 .grid{
@@ -176,6 +193,77 @@ h1{
   border:1px solid rgba(255,255,255,0.08);
   line-height:1.55;
   word-break:break-word;
+}
+
+.item.critical{
+  border-color:rgba(239,68,68,.4);
+  background:rgba(239,68,68,.08);
+}
+
+.item.warning{
+  border-color:rgba(245,158,11,.4);
+  background:rgba(245,158,11,.08);
+}
+
+.item.safe{
+  border-color:rgba(34,197,94,.4);
+  background:rgba(34,197,94,.08);
+}
+
+.table-wrapper{
+  overflow-x:auto;
+  margin-top:12px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:14px;
+}
+
+table th{
+  text-align:left;
+  padding:10px 12px;
+  background:rgba(255,255,255,0.06);
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  color:var(--muted);
+  font-weight:600;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+}
+
+table td{
+  padding:10px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+  word-break:break-word;
+}
+
+tr:hover td{
+  background:rgba(255,255,255,0.03);
+}
+
+.port-badge{
+  display:inline-block;
+  padding:3px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:600;
+}
+
+.port-badge.critical{
+  background:rgba(239,68,68,.2);
+  color:var(--red);
+}
+
+.port-badge.warning{
+  background:rgba(245,158,11,.2);
+  color:var(--amber);
+}
+
+.port-badge.safe{
+  background:rgba(34,197,94,.2);
+  color:var(--green);
 }
 
 .status-row{
@@ -197,6 +285,10 @@ h1{
 
 .status-pill.warning{
   border-color:rgba(245,158,11,.35);
+}
+
+.status-pill.critical{
+  border-color:rgba(239,68,68,.35);
 }
 
 .status-label{
@@ -268,6 +360,31 @@ h1{
   word-break:break-word;
 }
 
+.collapsible{
+  margin-top:12px;
+}
+
+.collapsible-toggle{
+  cursor:pointer;
+  color:var(--cyan);
+  font-size:14px;
+  font-weight:600;
+  user-select:none;
+}
+
+.collapsible-toggle:hover{
+  text-decoration:underline;
+}
+
+.collapsible-content{
+  display:none;
+  margin-top:12px;
+}
+
+.collapsible-content.show{
+  display:block;
+}
+
 .footer{
   margin-top:22px;
   text-align:center;
@@ -286,6 +403,9 @@ h1{
   .logo{
     font-size:46px;
   }
+  .grid{
+    grid-template-columns:1fr;
+  }
 }
 </style>
 </head>
@@ -297,13 +417,14 @@ h1{
     <div class="header">
         <div class="logo">🖥️</div>
         <h1>Security Audit</h1>
-        <p class="subtitle">Real-time local system snapshot with performance, identity, and safety indicators.</p>
+        <p class="subtitle">Complete system security audit with vulnerability assessment and risk scoring.</p>
     </div>
 
+    <!-- SUMMARY -->
     <div class="summary">
         <div class="summary-card">
             <div class="summary-label">Security Score</div>
-            <div class="summary-value">{{ score }}/100</div>
+            <div class="summary-value" style="color: {% if score >= 80 %}var(--green){% elif score >= 60 %}var(--amber){% else %}var(--red){% endif %};">{{ score }}/100</div>
         </div>
         <div class="summary-card">
             <div class="summary-label">Security Grade</div>
@@ -317,44 +438,337 @@ h1{
             <div class="summary-label">Hostname</div>
             <div class="summary-value">{{ hostname }}</div>
         </div>
+        <div class="summary-card">
+            <div class="summary-label">Risk Factors</div>
+            <div class="summary-value">{{ risk_factors|length }}</div>
+        </div>
     </div>
 
+    <!-- SYSTEM IDENTITY -->
     <div class="section">
-        <h3>System Identity</h3>
+        <h3>📋 System Identity</h3>
         <div class="grid">
             <div class="item">Local IP: <strong>{{ local_ip }}</strong></div>
             <div class="item">Python Version: <strong>{{ python_version }}</strong></div>
             <div class="item">Architecture: <strong>{{ architecture }}</strong></div>
             <div class="item">Machine Type: <strong>{{ machine }}</strong></div>
+            <div class="item">CPU Cores: <strong>{{ cpu_cores }}</strong></div>
+            <div class="item">Total Processes: <strong>{{ total_processes }}</strong></div>
         </div>
     </div>
 
+    <!-- RESOURCE OVERVIEW -->
     <div class="section">
-        <h3>Resource Overview</h3>
+        <h3>💾 Resource Overview</h3>
         <div class="grid">
             <div class="item">Total Disk: <strong>{{ total_gb }} GB</strong></div>
             <div class="item">Used Disk: <strong>{{ used_gb }} GB</strong></div>
             <div class="item">Free Disk: <strong>{{ free_gb }} GB</strong></div>
-            <div class="item">Disk Usage: <strong>{{ disk_percent }}%</strong></div>
-            <div class="item">CPU Usage: <strong>{{ cpu_usage }}%</strong></div>
-            <div class="item">CPU Cores: <strong>{{ cpu_cores }}</strong></div>
+            <div class="item {% if disk_percent > 90 %}critical{% elif disk_percent > 75 %}warning{% else %}safe{% endif %}">Disk Usage: <strong>{{ disk_percent }}%</strong></div>
+            <div class="item {% if cpu_usage > 85 %}critical{% elif cpu_usage > 70 %}warning{% else %}safe{% endif %}">CPU Usage: <strong>{{ cpu_usage }}%</strong></div>
             <div class="item">Total RAM: <strong>{{ total_ram }} GB</strong></div>
             <div class="item">Used RAM: <strong>{{ used_ram }} GB</strong></div>
-            <div class="item">Available RAM: <strong>{{ available_ram }} GB</strong></div>
-            <div class="item">RAM Usage: <strong>{{ ram_percent }}%</strong></div>
+            <div class="item {% if available_ram < 2 %}critical{% elif available_ram < 4 %}warning{% else %}safe{% endif %}">Available RAM: <strong>{{ available_ram }} GB</strong></div>
+            <div class="item {% if ram_percent > 90 %}critical{% elif ram_percent > 75 %}warning{% else %}safe{% endif %}">RAM Usage: <strong>{{ ram_percent }}%</strong></div>
         </div>
     </div>
 
+    <!-- 🔌 OPEN PORTS -->
+    <div class="section">
+        <h3>🔌 Open Ports <span class="badge {% if high_risk_ports|length == 0 %}safe{% endif %}">{{ open_ports|length }} open</span></h3>
+        {% if open_ports %}
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Port</th>
+                        <th>Service</th>
+                        <th>Risk Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for port in open_ports %}
+                    <tr>
+                        <td><strong>{{ port.port }}</strong></td>
+                        <td>{{ port.service }}</td>
+                        <td>
+                            {% if port.port in [21, 23, 3389, 3306, 6379] %}
+                                <span class="port-badge critical">🔴 High Risk</span>
+                            {% elif port.port in [22, 445, 5900] %}
+                                <span class="port-badge warning">🟡 Medium</span>
+                            {% else %}
+                                <span class="port-badge safe">🟢 Low</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="item safe">✅ No open ports detected. System is well-isolated.</div>
+        {% endif %}
+        
+        {% if high_risk_ports %}
+        <div class="collapsible">
+            <span class="collapsible-toggle" onclick="toggleCollapse('port-details')">⚠ View risk details</span>
+            <div class="collapsible-content" id="port-details">
+                <p style="margin-top:10px;color:var(--red);">
+                🚨 <strong>High Risk Ports Open:</strong> 
+                {% for p in high_risk_ports %}
+                Port {{ p.port }} ({{ p.service }}){% if not loop.last %}, {% endif %}
+                {% endfor %}
+                <br>Close these ports immediately if not required for your workflow.
+                </p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 🔥 FIREWALL STATUS -->
+    <div class="section">
+        <h3>🔥 Firewall Status <span class="badge {% if firewall_info.status == 'Active' or 'Active' in firewall_info.status %}safe{% endif %}">{{ firewall_info.status }}</span></h3>
+        <div class="grid">
+            <div class="item {% if 'inactive' in firewall_info.status.lower() or 'inactive' in firewall_info.status|string|lower %}critical{% else %}safe{% endif %}">
+                Status: <strong>{{ firewall_info.status }}</strong>
+            </div>
+            <div class="item">
+                Recommendation: 
+                <strong>
+                {% if 'inactive' in firewall_info.status.lower() or 'inactive' in firewall_info.status|string|lower %}
+                    ❌ Enable firewall immediately!
+                {% else %}
+                    ✅ Firewall is active
+                {% endif %}
+                </strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔗 ESTABLISHED CONNECTIONS -->
+    <div class="section">
+        <h3>🔗 Network Connections <span class="badge {% if suspicious_connections == 0 %}safe{% endif %}">{{ total_connections }} total</span></h3>
+        <div class="grid">
+            <div class="item {% if suspicious_connections > 0 %}warning{% else %}safe{% endif %}">
+                External IP Connections: <strong>{{ suspicious_connections }}</strong>
+            </div>
+            <div class="item">
+                Total Active: <strong>{{ total_connections }}</strong>
+            </div>
+        </div>
+        
+        {% if established_connections %}
+        <div class="collapsible">
+            <span class="collapsible-toggle" onclick="toggleCollapse('connections-details')">👁 View connection details</span>
+            <div class="collapsible-content" id="connections-details">
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Process</th>
+                                <th>Local</th>
+                                <th>Remote</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for conn in established_connections[:15] %}
+                            <tr>
+                                <td>{{ conn.process }}</td>
+                                <td>{{ conn.local_ip }}</td>
+                                <td>{{ conn.remote_ip }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% if established_connections|length > 15 %}
+                    <p style="color:var(--muted);margin-top:8px;font-size:13px;">...and {{ established_connections|length - 15 }} more connections</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 📦 OS PATCHES -->
+    <div class="section">
+        <h3>📦 System Updates <span class="badge {% if patches_info.outdated_packages == 0 or patches_info.outdated_packages == '0' %}safe{% endif %}">{{ patches_info.outdated_packages }} pending</span></h3>
+        <div class="grid">
+            <div class="item {% if patches_info.outdated_packages is not string and patches_info.outdated_packages > 10 %}critical{% elif patches_info.outdated_packages is not string and patches_info.outdated_packages > 0 %}warning{% else %}safe{% endif %}">
+                Outdated Packages: <strong>{{ patches_info.outdated_packages }}</strong>
+            </div>
+            <div class="item {% if patches_info.security_updates > 0 %}critical{% else %}safe{% endif %}">
+                Security Updates: <strong>{{ patches_info.security_updates }}</strong>
+            </div>
+            <div class="item">
+                Total Packages: <strong>{{ patches_info.total_packages }}</strong>
+            </div>
+        </div>
+        
+        {% if patches_info.pending_updates and patches_info.pending_updates|length > 0 %}
+        <div class="collapsible">
+            <span class="collapsible-toggle" onclick="toggleCollapse('patches-details')">📋 View pending updates</span>
+            <div class="collapsible-content" id="patches-details">
+                <div class="item" style="margin-top:10px;">
+                    <strong>Pending Updates (top {{ patches_info.pending_updates|length }}):</strong><br>
+                    {% for pkg in patches_info.pending_updates %}
+                    - {{ pkg }}<br>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 👤 USER ACCOUNTS -->
+    <div class="section">
+        <h3>👤 User Accounts <span class="badge {% if not users_info.guest_enabled %}safe{% endif %}">{{ users_info.total_users }} users</span></h3>
+        <div class="grid">
+            <div class="item {% if users_info.guest_enabled %}critical{% else %}safe{% endif %}">
+                Guest Account: <strong>{{ 'ENABLED ❌' if users_info.guest_enabled else 'Disabled ✅' }}</strong>
+            </div>
+            <div class="item {% if users_info.admin_users|length > 3 %}warning{% else %}safe{% endif %}">
+                Admin/Root Users: <strong>{{ users_info.admin_users|length }}</strong>
+            </div>
+            <div class="item">
+                Standard Users: <strong>{{ users_info.standard_users|length }}</strong>
+            </div>
+        </div>
+        
+        {% if users_info.admin_users %}
+        <div class="collapsible">
+            <span class="collapsible-toggle" onclick="toggleCollapse('users-details')">👥 View user list</span>
+            <div class="collapsible-content" id="users-details">
+                <div class="grid" style="margin-top:10px;">
+                    <div class="item">
+                        <strong>Administrators:</strong><br>
+                        {% for user in users_info.admin_users %}
+                        - {{ user }}<br>
+                        {% endfor %}
+                    </div>
+                    {% if users_info.standard_users %}
+                    <div class="item">
+                        <strong>Standard Users:</strong><br>
+                        {% for user in users_info.standard_users[:10] %}
+                        - {{ user }}<br>
+                        {% endfor %}
+                        {% if users_info.standard_users|length > 10 %}
+                        ...and {{ users_info.standard_users|length - 10 }} more
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ⚙️ SUSPICIOUS PROCESSES -->
+    <div class="section">
+        <h3>⚙️ Process Security <span class="badge {% if suspicious_processes|length == 0 %}safe{% endif %}">{{ total_processes }} total</span></h3>
+        <div class="grid">
+            <div class="item {% if suspicious_processes|length > 0 %}critical{% else %}safe{% endif %}">
+                Suspicious Processes: <strong>{{ suspicious_processes|length }}</strong>
+            </div>
+            <div class="item {% if high_resource_processes|length > 3 %}warning{% else %}safe{% endif %}">
+                High Resource Usage: <strong>{{ high_resource_processes|length }}</strong>
+            </div>
+            <div class="item">Total Running: <strong>{{ total_processes }}</strong></div>
+        </div>
+        
+        {% if suspicious_processes %}
+        <div class="collapsible">
+            <span class="collapsible-toggle" onclick="toggleCollapse('susp-proc-details')">🚨 View suspicious processes</span>
+            <div class="collapsible-content" id="susp-proc-details">
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>PID</th>
+                                <th>Name</th>
+                                <th>CPU %</th>
+                                <th>Memory %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for proc in suspicious_processes %}
+                            <tr>
+                                <td>{{ proc.pid }}</td>
+                                <td style="color:var(--red);font-weight:600;">{{ proc.name }}</td>
+                                <td>{{ proc.cpu }}%</td>
+                                <td>{{ proc.memory }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if high_resource_processes %}
+        <div class="collapsible">
+            <span class="collapsible-toggle" onclick="toggleCollapse('high-res-details')">⚡ View high resource processes</span>
+            <div class="collapsible-content" id="high-res-details">
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>PID</th>
+                                <th>Name</th>
+                                <th>CPU %</th>
+                                <th>Memory %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for proc in high_resource_processes[:10] %}
+                            <tr>
+                                <td>{{ proc.pid }}</td>
+                                <td>{{ proc.name }}</td>
+                                <td>{{ proc.cpu }}%</td>
+                                <td>{{ proc.memory }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% if high_resource_processes|length > 10 %}
+                    <p style="color:var(--muted);margin-top:8px;font-size:13px;">...and {{ high_resource_processes|length - 10 }} more</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 🛡️ ANTIVIRUS -->
+    <div class="section">
+        <h3>🛡️ Antivirus Protection</h3>
+        <div class="grid">
+            <div class="item">Name: <strong>{{ antivirus_info.name }}</strong></div>
+            <div class="item {% if antivirus_info.real_time_protection %}safe{% else %}critical{% endif %}">
+                Real-time Protection: <strong>{{ '✅ ON' if antivirus_info.real_time_protection else '❌ OFF' }}</strong>
+            </div>
+            <div class="item {% if antivirus_info.cloud_delivered_protection %}safe{% else %}warning{% endif %}">
+                Cloud Protection: <strong>{{ '✅ ON' if antivirus_info.cloud_delivered_protection else '❌ OFF' }}</strong>
+            </div>
+            <div class="item">Last Update: <strong>{{ antivirus_info.last_update }}</strong></div>
+            <div class="item {% if 'Active' in antivirus_info.status or 'Protected' in antivirus_info.status %}safe{% elif 'OFF' in antivirus_info.status %}critical{% else %}warning{% endif %}">
+                Status: <strong>{{ antivirus_info.status }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCORE -->
     <div class="score-box">
-        <div class="score-title">Health Score: {{ score }}/100</div>
-        <div class="grade">System posture: {{ grade }}</div>
+        <div class="score-title" style="color: {% if score >= 80 %}var(--green){% elif score >= 60 %}var(--amber){% else %}var(--red){% endif %};">Health Score: {{ score }}/100</div>
+        <div class="grade">System posture: <strong>{{ grade }}</strong></div>
         <div class="progress">
             <div class="progress-fill" style="width: {{ score }}%;"></div>
         </div>
     </div>
 
+    <!-- LIVE STATUS -->
     <div class="section">
-        <h3>Live Status</h3>
+        <h3>Live Status Overview</h3>
         <div class="status-row">
             {% for s in status_items %}
             <div class="status-pill {{ s.status }}">
@@ -365,15 +779,38 @@ h1{
         </div>
     </div>
 
+    <!-- RISK FACTORS -->
+    {% if risk_factors %}
+    <div class="section">
+        <h3>🚨 Risk Factors Summary</h3>
+        {% for risk in risk_factors %}
+        <div class="item critical" style="margin-bottom:8px;">
+            <strong>[{{ risk.severity|upper }}]</strong> {{ risk.detail }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- RECOMMENDATIONS -->
     <div class="recommendations">
-        <h3>Recommendations</h3>
+        <h3>📋 Recommendations ({{ recommendations|length }})</h3>
         {% for item in recommendations %}
         <p>{{ item }}</p>
         {% endfor %}
     </div>
 
-    <div class="footer">Cyber Guardian Security Suite © 2026</div>
+    <div class="footer">
+        Cyber Guardian Security Suite © 2026 | 
+        <a href="/pdf-report" style="color:var(--cyan);">📄 Download PDF Report</a>
+    </div>
 </div>
+
+<script>
+function toggleCollapse(id){
+    var el = document.getElementById(id);
+    el.classList.toggle('show');
+}
+</script>
 
 </body>
 </html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Port Scanner - Cyber Guardian</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+:root{
+  --bg1:#020617; --bg2:#0f172a; --bg3:#1e293b;
+  --text:#e2e8f0; --muted:#94a3b8;
+  --cyan:#06b6d4; --blue:#3b82f6; --green:#22c55e; --red:#ef4444; --amber:#f59e0b;
+}
+*{ margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+body{
+  min-height:100dvh;
+  background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+  color:var(--text); padding:30px;
+}
+.container{ max-width:900px; margin:0 auto; }
+h1{ font-size:28px; margin-bottom:20px; color:var(--cyan); }
+.back-link{
+  display:inline-block; margin-bottom:20px; color:var(--muted);
+  text-decoration:none; transition:0.2s;
+}
+.back-link:hover{ color:var(--cyan); }
+.stats-bar{
+  display:flex; gap:16px; margin-bottom:24px; flex-wrap:wrap;
+}
+.stat-card{
+  padding:16px 22px; border-radius:14px;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08);
+  min-width:140px;
+}
+.stat-card .label{ font-size:13px; color:var(--muted); margin-bottom:4px; }
+.stat-card .value{ font-size:22px; font-weight:700; }
+table{ width:100%; border-collapse:collapse; }
+th, td{ padding:14px 18px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.06); }
+th{ color:var(--muted); font-weight:500; font-size:13px; text-transform:uppercase; letter-spacing:0.5px; }
+.status{ display:inline-block; padding:4px 12px; border-radius:999px; font-size:13px; font-weight:600; }
+.status.open{ background:rgba(239,68,68,0.15); color:var(--red); }
+.loading{ text-align:center; padding:60px 0; color:var(--muted); font-size:18px; }
+.error{ padding:16px; background:rgba(239,68,68,0.12); border-radius:12px; color:var(--red); }
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="/" class="back-link">← Back to Dashboard</a>
+  <h1>🔌 Port Scanner</h1>
+  <div id="stats" class="stats-bar"></div>
+  <div id="loading" class="loading">Scanning ports...</div>
+  <div id="error" class="error" style="display:none;"></div>
+  <table id="ports-table" style="display:none;">
+    <thead><tr><th>Port</th><th>Service</th><th>Status</th></tr></thead>
+    <tbody id="ports-body"></tbody>
+  </table>
+  <p id="no-ports" style="display:none; padding:30px 0; color:var(--green); font-size:16px;">
+    ✅ No open ports detected. Your system is secure.
+  </p>
+</div>
+
+<script>
+async function loadData(){
+  try{
+    const res = await fetch('/api/security/ports/data');
+    const data = await res.json();
+    
+    document.getElementById('loading').style.display = 'none';
+    
+    if(data.error){
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('error').textContent = '❌ ' + data.error;
+      return;
+    }
+    
+    // Stats
+    document.getElementById('stats').innerHTML = `
+      <div class="stat-card"><div class="label">Total Open Ports</div><div class="value">${data.count}</div></div>
+    `;
+    
+    if(data.count === 0){
+      document.getElementById('no-ports').style.display = 'block';
+      return;
+    }
+    
+    // Table
+    const table = document.getElementById('ports-table');
+    const tbody = document.getElementById('ports-body');
+    table.style.display = 'table';
+    
+    data.open_ports.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${p.port}</strong></td>
+        <td>${p.service}</td>
+        <td><span class="status open">${p.status}</span></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch(e){
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = '❌ Failed to load port data: ' + e.message;
+  }
+}
+loadData();
+</script>
+</body>
+</html>

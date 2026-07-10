@@ -103,6 +103,10 @@ Clone the repository:
 ```bash
 git clone https://github.com/Bhagirathhh/CyberGuardian.git
 cd CyberGuardian
+python3 -m venv venv
+source venv/bin/activate
+pip install scikit-learn joblib
+pip install psutil
 ```
 
 Install dependencies:
