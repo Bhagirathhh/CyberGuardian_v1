@@ -19,6 +19,11 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+from dotenv import load_dotenv
+import razorpay
+
+# Load environment variables from .env file
+load_dotenv()
 
 try:
     from reportlab.lib.pagesizes import A4
@@ -48,6 +53,7 @@ def init_db():
             username TEXT UNIQUE NOT NULL,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
+            plan TEXT DEFAULT 'free',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         CREATE TABLE IF NOT EXISTS audit_history (
@@ -74,11 +80,31 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
         );
+        CREATE TABLE IF NOT EXISTS payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            payment_id TEXT,
+            amount INTEGER,
+            plan TEXT,
+            status TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
     ''')
     conn.commit()
     conn.close()
 
 init_db()
+
+# --- Razorpay Client ---
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
+
+if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+    print("⚠️ WARNING: Razorpay keys not found in .env file!")
+    print("Please add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env file")
+
+razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 # --- Login Decorator ---
 def login_required(f):
@@ -87,6 +113,19 @@ def login_required(f):
         if 'user_id' not in session:
             flash("Please login first!", "warning")
             return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# --- Premium Decorator ---
+def premium_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash("Please login first!", "warning")
+            return redirect(url_for('login'))
+        if session.get('plan') != 'premium':
+            flash("⭐ This feature requires a Premium subscription! Upgrade to access.", "warning")
+            return redirect(url_for('pricing'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -946,8 +985,8 @@ def register():
         conn = get_db()
         try:
             conn.execute(
-                "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
-                (username, email, generate_password_hash(password))
+                "INSERT INTO users (username, email, password_hash, plan) VALUES (?, ?, ?, ?)",
+                (username, email, generate_password_hash(password), 'free')
             )
             conn.commit()
             flash("Registration successful! Please login.", "success")
@@ -975,6 +1014,7 @@ def login():
         if user and check_password_hash(user["password_hash"], password):
             session["user_id"] = user["id"]
             session["username"] = user["username"]
+            session["plan"] = user["plan"]
             flash(f"Welcome back, {user['username']}!", "success")
             return redirect(url_for("home"))
         else:
@@ -988,6 +1028,104 @@ def logout():
     session.clear()
     flash("You have been logged out.", "info")
     return redirect(url_for("login"))
+
+
+# ===================== PRICING & PAYMENT ROUTES =====================
+
+@app.route("/pricing")
+def pricing():
+    return render_template("pricing.html")
+
+@app.route('/create-payment', methods=['POST'])
+@login_required
+def create_payment():
+    plan = request.form.get('plan', 'monthly')
+    
+    # Amount in paise (₹100 = 10000 paise)
+    if plan == 'monthly':
+        amount = 10000  # ₹100
+        plan_name = "Monthly"
+    else:
+        amount = 100000  # ₹1000
+        plan_name = "Yearly"
+    
+    try:
+        # Create payment link - SIMPLIFIED VERSION
+        payment_link = razorpay_client.payment_link.create({
+            "amount": amount,
+            "currency": "INR",
+            "description": f"Cyber Guardian {plan_name} Plan",
+            "callback_url": url_for('payment_callback', _external=True),
+            "callback_method": "get"
+        })
+        
+        # Store payment details in session
+        session['payment_link_id'] = payment_link['id']
+        session['payment_plan'] = plan
+        
+        # Save to payments table
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO payments (user_id, payment_id, amount, plan, status) VALUES (?, ?, ?, ?, ?)",
+            (session["user_id"], payment_link['id'], amount, plan, 'initiated')
+        )
+        conn.commit()
+        conn.close()
+        
+        # Redirect to payment page
+        return redirect(payment_link['short_url'])
+        
+    except Exception as e:
+        flash(f"Payment creation failed: {str(e)}", "danger")
+        return redirect(url_for('pricing'))
+
+@app.route('/payment-callback')
+@login_required
+def payment_callback():
+    # Get payment status from query parameters
+    payment_id = request.args.get('razorpay_payment_link_id')
+    payment_status = request.args.get('razorpay_payment_link_status')
+    payment_link_id = request.args.get('razorpay_payment_link_reference_id')
+    
+    if payment_status == 'paid':
+        try:
+            # Verify payment with Razorpay API
+            payment_details = razorpay_client.payment_link.fetch(payment_id)
+            
+            if payment_details.get('status') == 'paid':
+                # ✅ Payment successful - Upgrade user
+                conn = get_db()
+                
+                # Update user plan
+                conn.execute(
+                    "UPDATE users SET plan = 'premium' WHERE id = ?",
+                    (session["user_id"],)
+                )
+                
+                # Update payment status
+                conn.execute(
+                    "UPDATE payments SET status = 'completed' WHERE payment_id = ?",
+                    (payment_id,)
+                )
+                conn.commit()
+                conn.close()
+                
+                # Update session
+                session["plan"] = "premium"
+                
+                flash("🎉 Payment successful! You are now a Premium user! Enjoy all features!", "success")
+                return redirect(url_for('home'))
+            else:
+                flash("Payment verification failed. Please contact support.", "danger")
+                return redirect(url_for('pricing'))
+                
+        except Exception as e:
+            flash(f"Payment verification error: {str(e)}", "danger")
+            return redirect(url_for('pricing'))
+            
+    else:
+        flash("Payment was not completed. Please try again.", "warning")
+        return redirect(url_for('pricing'))
 
 
 # ===================== MAIN ROUTES =====================
@@ -1042,6 +1180,20 @@ def url_scanner():
     score = 0
     reasons = []
 
+    # Free users: 5 scans per day limit
+    if 'user_id' in session and session.get('plan') == 'free':
+        today = datetime.now().strftime('%Y-%m-%d')
+        conn = get_db()
+        count = conn.execute(
+            "SELECT COUNT(*) as count FROM url_scan_history WHERE user_id = ? AND date(created_at) = ?",
+            (session["user_id"], today)
+        ).fetchone()['count']
+        conn.close()
+        
+        if count >= 5:
+            flash("⚠️ Daily limit reached (5 scans). Upgrade to Premium for unlimited scans!", "warning")
+            return render_template("url_scanner.html", result=result, color=color, score=score, reasons=reasons)
+
     if request.method == "POST":
         raw_url = request.form.get("url", "")
         result, color, score, reasons = analyze_url_ai(raw_url)
@@ -1060,7 +1212,7 @@ def url_scanner():
 
 
 @app.route("/audit")
-@login_required
+@premium_required
 def audit():
     data = get_extended_system_audit()
     # Save to history
@@ -1145,7 +1297,7 @@ def file_integrity():
 
 
 @app.route("/pdf-report")
-@login_required
+@premium_required
 def pdf_report():
     data = get_extended_system_audit()
     pdf_path = os.path.join(app.config["UPLOAD_FOLDER"], f"audit_report_{int(time.time())}.pdf")
@@ -1156,43 +1308,43 @@ def pdf_report():
 # ===================== PAGE RENDERERS (Security Tools) =====================
 
 @app.route("/api/security/ports")
-@login_required
+@premium_required
 def ports_page():
     return render_template('port_scanner.html')
 
 
 @app.route("/api/security/firewall")
-@login_required
+@premium_required
 def firewall_page():
     return render_template('firewall_check.html')
 
 
 @app.route("/api/security/connections")
-@login_required
+@premium_required
 def net_connections_page():
     return render_template('connections.html')
 
 
 @app.route("/api/security/patches")
-@login_required
+@premium_required
 def patches_page():
     return render_template('patches.html')
 
 
 @app.route("/api/security/users")
-@login_required
+@premium_required
 def users_page():
     return render_template('users.html')
 
 
 @app.route("/api/security/processes")
-@login_required
+@premium_required
 def processes_page():
     return render_template('processes.html')
 
 
 @app.route("/api/security/antivirus")
-@login_required
+@premium_required
 def antivirus_page():
     return render_template('antivirus.html')
 
@@ -1200,7 +1352,7 @@ def antivirus_page():
 # ===================== DATA ENDPOINTS (Security Tools) =====================
 
 @app.route("/api/security/ports/data")
-@login_required
+@premium_required
 def get_open_ports_data():
     import socket
     open_ports = []
@@ -1215,7 +1367,7 @@ def get_open_ports_data():
 
 
 @app.route("/api/security/firewall/data")
-@login_required
+@premium_required
 def get_firewall_data():
     import subprocess, platform
     os_type = platform.system()
@@ -1233,7 +1385,7 @@ def get_firewall_data():
 
 
 @app.route("/api/security/connections/data")
-@login_required
+@premium_required
 def get_net_connections_data():
     import psutil
     connections_list = []
@@ -1259,21 +1411,21 @@ def get_net_connections_data():
 
 
 @app.route("/api/security/patches/data")
-@login_required
+@premium_required
 def get_patches_data():
     patches = get_os_patches_info()
     return jsonify(patches)
 
 
 @app.route("/api/security/users/data")
-@login_required
+@premium_required
 def get_users_data():
     users = get_user_accounts_info()
     return jsonify(users)
 
 
 @app.route("/api/security/processes/data")
-@login_required
+@premium_required
 def get_processes_data():
     suspicious, high_resource, total = scan_suspicious_processes()
     return jsonify({
@@ -1286,7 +1438,7 @@ def get_processes_data():
 
 
 @app.route("/api/security/antivirus/data")
-@login_required
+@premium_required
 def get_antivirus_data():
     av = check_antivirus_status()
     return jsonify(av)
@@ -1329,6 +1481,570 @@ def delete_history():
     conn.commit()
     conn.close()
     return jsonify({"success": True})
+
+
+# ===================== NEW FEATURE ROUTES =====================
+
+@app.route("/event-log-analyzer")
+@premium_required
+def event_log_analyzer():
+    """Windows Event Log Analyzer - Check Windows logs for suspicious activity"""
+    suspicious_activity = {
+        "failed_logins": 0,
+        "suspicious_powershell": [],
+        "account_failures": [],
+        "total_events": 0
+    }
+    
+    try:
+        if platform.system() == "Windows":
+            # Check security logs for failed logins
+            result = subprocess.run(
+                ["powershell", "-Command", 
+                 "Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4625} -MaxEvents 50 | Select-Object TimeCreated, Message"],
+                capture_output=True, text=True, timeout=10
+            )
+            if result.stdout:
+                # Count failed logins
+                failed_logins = result.stdout.count("4625")
+                suspicious_activity["failed_logins"] = failed_logins
+                
+                # Extract IP addresses from failed logins
+                ip_pattern = r'(\d{1,3}\.){3}\d{1,3}'
+                ips = re.findall(ip_pattern, result.stdout)
+                suspicious_activity["account_failures"] = list(set(ips))[:5]
+            
+            # Check for suspicious PowerShell activity
+            ps_result = subprocess.run(
+                ["powershell", "-Command", 
+                 "Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-PowerShell/Operational'; ID=4104} -MaxEvents 20 | Select-Object TimeCreated, Message"],
+                capture_output=True, text=True, timeout=10
+            )
+            if ps_result.stdout:
+                # Look for suspicious PowerShell commands
+                suspicious_cmds = []
+                suspicious_patterns = ['-enc', '-e', 'Invoke-', 'IEX', 'DownloadFile', 'WebClient', 'Net.WebClient']
+                for line in ps_result.stdout.split('\n'):
+                    for pattern in suspicious_patterns:
+                        if pattern.lower() in line.lower():
+                            suspicious_cmds.append(line[:150])
+                            break
+                suspicious_activity["suspicious_powershell"] = suspicious_cmds[:5]
+                
+            # Get total events count
+            count_result = subprocess.run(
+                ["powershell", "-Command", 
+                 "(Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4625}).Count"],
+                capture_output=True, text=True, timeout=5
+            )
+            try:
+                suspicious_activity["total_events"] = int(count_result.stdout.strip())
+            except:
+                suspicious_activity["total_events"] = suspicious_activity["failed_logins"]
+                
+        else:
+            suspicious_activity["message"] = "Windows Event Log analysis is only available on Windows systems"
+            
+    except Exception as e:
+        suspicious_activity["error"] = str(e)
+        suspicious_activity["message"] = "Could not access Windows Event Logs. Run as administrator."
+    
+    return render_template("event-log-analyzer.html", activity=suspicious_activity)
+
+
+@app.route("/persistence-scanner")
+@premium_required
+def persistence_scanner():
+    """Persistence Scanner - Check for programs that run automatically on startup"""
+    persistence_items = {
+        "startup_apps": [],
+        "services": [],
+        "scheduled_tasks": [],
+        "registry_entries": [],
+        "total_items": 0,
+        "suspicious_items": []
+    }
+    
+    try:
+        if platform.system() == "Windows":
+            # Check Startup folder
+            startup_paths = [
+                os.path.join(os.getenv('APPDATA'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup'),
+                os.path.join(os.getenv('PROGRAMDATA'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
+            ]
+            for path in startup_paths:
+                if os.path.exists(path):
+                    for file in os.listdir(path):
+                        if file.endswith(('.exe', '.lnk', '.bat', '.cmd', '.vbs')):
+                            persistence_items["startup_apps"].append(file)
+            
+            # Check Services (using sc query)
+            services_result = subprocess.run(
+                ["sc", "query", "state=all", "type=service"],
+                capture_output=True, text=True, timeout=10
+            )
+            service_lines = services_result.stdout.split('\n')
+            services = []
+            for line in service_lines:
+                if 'SERVICE_NAME:' in line:
+                    service_name = line.split('SERVICE_NAME:')[-1].strip()
+                    if service_name:
+                        services.append(service_name)
+            persistence_items["services"] = services[:20]
+            
+            # Check scheduled tasks
+            tasks_result = subprocess.run(
+                ["schtasks", "/query", "/fo", "list"],
+                capture_output=True, text=True, timeout=10
+            )
+            tasks = []
+            for line in tasks_result.stdout.split('\n'):
+                if 'TaskName:' in line:
+                    task_name = line.split('TaskName:')[-1].strip()
+                    if task_name and '\\' in task_name:
+                        tasks.append(task_name)
+            persistence_items["scheduled_tasks"] = tasks[:15]
+            
+            # Check suspicious items
+            suspicious_names = ['update', 'installer', 'java', 'adobe', 'flash', 'chrome', 'firefox']
+            for item in persistence_items["startup_apps"]:
+                item_lower = item.lower()
+                for susp in suspicious_names:
+                    if susp in item_lower:
+                        persistence_items["suspicious_items"].append({
+                            "name": item,
+                            "type": "Startup Application",
+                            "reason": f"Potentially suspicious name: {susp}"
+                        })
+                        break
+                        
+        else:
+            if platform.system() == "Linux":
+                # Check systemd services
+                services_result = subprocess.run(
+                    ["systemctl", "list-unit-files", "--type=service"],
+                    capture_output=True, text=True, timeout=5
+                )
+                services = []
+                for line in services_result.stdout.split('\n'):
+                    if '.service' in line and 'enabled' in line:
+                        service_name = line.split('.service')[0]
+                        if service_name.strip():
+                            services.append(service_name)
+                persistence_items["services"] = services[:10]
+                
+                # Check cron jobs
+                cron_result = subprocess.run(
+                    ["crontab", "-l"],
+                    capture_output=True, text=True, timeout=5
+                )
+                if cron_result.stdout:
+                    cron_lines = [l for l in cron_result.stdout.split('\n') if l and not l.startswith('#')]
+                    persistence_items["scheduled_tasks"] = cron_lines[:10]
+                    
+            persistence_items["message"] = "Persistence scan completed for your operating system"
+            
+    except Exception as e:
+        persistence_items["error"] = str(e)
+        persistence_items["message"] = "Could not scan all persistence locations. Run with appropriate privileges."
+    
+    persistence_items["total_items"] = (
+        len(persistence_items["startup_apps"]) + 
+        len(persistence_items["services"]) + 
+        len(persistence_items["scheduled_tasks"])
+    )
+    
+    return render_template("persistence-scanner.html", persistence=persistence_items)
+
+
+@app.route("/ioc-scanner", methods=["GET", "POST"])
+@premium_required
+def ioc_scanner():
+    """IOC Scanner - Check suspicious IPs, Domains, URLs, File Hashes"""
+    result = None
+    ioc_type = None
+    indicator = None
+    
+    if request.method == "POST":
+        ioc_type = request.form.get("ioc_type")
+        indicator = request.form.get("indicator", "").strip()
+        
+        if not indicator:
+            flash("Please enter an indicator to scan", "warning")
+        else:
+            result = {
+                "type": ioc_type,
+                "indicator": indicator,
+                "status": "Unknown",
+                "risk_level": "Low",
+                "details": [],
+                "threat_intel": []
+            }
+            
+            # Analyze based on IOC type
+            if ioc_type == "ip":
+                try:
+                    ip = ipaddress.ip_address(indicator)
+                    if ip.is_private:
+                        result["status"] = "Safe (Private IP)"
+                        result["risk_level"] = "Low"
+                        result["details"].append("Private IP address - internal network")
+                    else:
+                        result["status"] = "Potentially Suspicious"
+                        result["risk_level"] = "Medium"
+                        result["details"].append("Public IP address - verify against threat intelligence")
+                        
+                        if indicator.startswith(('85.', '94.', '185.', '192.')):
+                            result["threat_intel"].append("⚠️ IP range associated with known threat actors")
+                        
+                        for port in [22, 23, 80, 443, 445, 3389]:
+                            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                            sock.settimeout(0.5)
+                            try:
+                                if sock.connect_ex((indicator, port)) == 0:
+                                    result["details"].append(f"⚠️ Port {port} is reachable")
+                            except:
+                                pass
+                            sock.close()
+                except:
+                    result["status"] = "Invalid IP Address"
+                    result["risk_level"] = "Error"
+                    
+            elif ioc_type == "domain":
+                suspicious_keywords = ['login', 'verify', 'secure', 'update', 'bank', 'paypal', 'amazon', 'apple']
+                found_keywords = [kw for kw in suspicious_keywords if kw in indicator.lower()]
+                
+                if found_keywords:
+                    result["status"] = "Suspicious Domain"
+                    result["risk_level"] = "High"
+                    result["details"].append(f"⚠️ Contains suspicious keywords: {', '.join(found_keywords)}")
+                    result["threat_intel"].append("Domain may be used for phishing")
+                
+                risky_tlds = ['.xyz', '.top', '.click', '.info', '.buzz', '.loan', '.work', '.zip']
+                for tld in risky_tlds:
+                    if indicator.lower().endswith(tld):
+                        result["threat_intel"].append(f"⚠️ Risky TLD detected: {tld}")
+                        result["risk_level"] = "High"
+                        break
+                
+                if result["status"] == "Unknown":
+                    result["status"] = "Low Risk Domain"
+                    result["risk_level"] = "Low"
+                    result["details"].append("Domain appears normal - monitor for suspicious behavior")
+                    
+            elif ioc_type == "url":
+                url_result = analyze_url_ai(indicator)
+                if "Phishing" in url_result[0]:
+                    result["status"] = "Malicious URL"
+                    result["risk_level"] = "Critical"
+                    result["details"].append(f"🚨 {url_result[0]}")
+                    result["details"].append(f"Confidence: {url_result[2]}%")
+                    if url_result[3]:
+                        result["details"].extend(url_result[3])
+                else:
+                    result["status"] = "Safe URL"
+                    result["risk_level"] = "Low"
+                    result["details"].append(url_result[0])
+                    if url_result[3]:
+                        result["details"].extend(url_result[3])
+                    
+            elif ioc_type == "hash":
+                if len(indicator) == 32:
+                    result["details"].append("MD5 hash detected")
+                elif len(indicator) == 40:
+                    result["details"].append("SHA-1 hash detected")
+                elif len(indicator) == 64:
+                    result["details"].append("SHA-256 hash detected")
+                else:
+                    result["details"].append("⚠️ Unknown hash format")
+                
+                suspicious_hashes = [
+                    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "d41d8cd98f00b204e9800998ecf8427e",
+                    "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
+                ]
+                if indicator.lower() in suspicious_hashes:
+                    result["status"] = "⚠️ Known Malicious Hash"
+                    result["risk_level"] = "Critical"
+                    result["threat_intel"].append("Hash matches known malware signature")
+                    result["details"].append("This hash is associated with known threats")
+                else:
+                    result["status"] = "Hash Not Found in Known Threat Database"
+                    result["risk_level"] = "Low"
+                    result["details"].append("Hash not detected in our threat intelligence database")
+                    
+        # Save scan result if logged in
+        if "user_id" in session and result:
+            conn = get_db()
+            conn.execute(
+                "INSERT INTO url_scan_history (user_id, url, result, score) VALUES (?, ?, ?, ?)",
+                (session["user_id"], f"{ioc_type}: {indicator}", result.get("status", "Unknown"), 
+                 100 if result.get("risk_level") == "Low" else 50 if result.get("risk_level") == "Medium" else 10)
+            )
+            conn.commit()
+            conn.close()
+    
+    return render_template("ioc-scanner.html", result=result, ioc_type=ioc_type, indicator=indicator)
+
+
+@app.route("/mitre-mapper", methods=["GET", "POST"])
+@premium_required
+def mitre_mapper():
+    """MITRE ATT&CK Mapping - Map suspicious behaviors to MITRE techniques"""
+    mapping_result = None
+    behavior = None
+    
+    # MITRE ATT&CK Techniques Database
+    mitre_techniques = {
+        "powershell": {
+            "technique": "T1059.001",
+            "name": "Command and Scripting Interpreter: PowerShell",
+            "tactic": "Execution",
+            "description": "Adversaries may use PowerShell to execute commands and scripts.",
+            "mitigation": "Disable PowerShell scripting where not needed, use constrained language mode.",
+            "detection": "Monitor PowerShell command-line arguments and script block logging."
+        },
+        "suspicious_process": {
+            "technique": "T1059",
+            "name": "Command and Scripting Interpreter",
+            "tactic": "Execution",
+            "description": "Adversaries may abuse command interpreters to execute commands.",
+            "mitigation": "Restrict script execution policies, use application whitelisting.",
+            "detection": "Monitor process creation events and command-line parameters."
+        },
+        "port_445": {
+            "technique": "T1021.002",
+            "name": "Remote Services: SMB/Windows Admin Shares",
+            "tactic": "Lateral Movement",
+            "description": "Adversaries may use SMB to move laterally in the network.",
+            "mitigation": "Restrict SMB access, use strong authentication, limit shares.",
+            "detection": "Monitor for unusual SMB connections and authentication attempts."
+        },
+        "firewall_off": {
+            "technique": "T1562.004",
+            "name": "Impair Defenses: Disable or Modify System Firewall",
+            "tactic": "Defense Evasion",
+            "description": "Adversaries may disable the firewall to allow malicious activity.",
+            "mitigation": "Use group policies to enforce firewall configuration.",
+            "detection": "Monitor for changes to firewall configuration or service status."
+        },
+        "antivirus_off": {
+            "technique": "T1562.001",
+            "name": "Impair Defenses: Disable or Modify Tools",
+            "tactic": "Defense Evasion",
+            "description": "Adversaries may disable antivirus protection.",
+            "mitigation": "Use endpoint detection and response (EDR) solutions.",
+            "detection": "Monitor for AV service stoppage or configuration changes."
+        },
+        "suspicious_connection": {
+            "technique": "T1071.001",
+            "name": "Application Layer Protocol: Web Protocols",
+            "tactic": "Command and Control",
+            "description": "Adversaries may use web protocols for C2 communication.",
+            "mitigation": "Use network segmentation and application whitelisting.",
+            "detection": "Monitor network traffic for anomalous patterns."
+        },
+        "bruteforce": {
+            "technique": "T1110.001",
+            "name": "Brute Force: Password Guessing",
+            "tactic": "Credential Access",
+            "description": "Adversaries may brute force passwords to gain access.",
+            "mitigation": "Use strong passwords, implement account lockout policies.",
+            "detection": "Monitor for multiple failed login attempts."
+        },
+        "default": {
+            "technique": "T1078",
+            "name": "Valid Accounts",
+            "tactic": "Defense Evasion",
+            "description": "Adversaries may use valid accounts to hide malicious activity.",
+            "mitigation": "Implement least privilege principle.",
+            "detection": "Monitor for unusual account activity."
+        }
+    }
+    
+    if request.method == "POST":
+        behavior = request.form.get("behavior", "").strip()
+        behavior_lower = behavior.lower()
+        
+        mapping_result = {
+            "behavior": behavior,
+            "techniques": [],
+            "risk_level": "Low",
+            "summary": ""
+        }
+        
+        # Map behavior to MITRE techniques
+        matched_techniques = []
+        risk_score = 0
+        
+        if "powershell" in behavior_lower:
+            matched_techniques.append(mitre_techniques["powershell"])
+            risk_score += 30
+        if "process" in behavior_lower or "suspicious" in behavior_lower:
+            matched_techniques.append(mitre_techniques["suspicious_process"])
+            risk_score += 20
+        if "port" in behavior_lower and "445" in behavior_lower:
+            matched_techniques.append(mitre_techniques["port_445"])
+            risk_score += 25
+        if "firewall" in behavior_lower:
+            matched_techniques.append(mitre_techniques["firewall_off"])
+            risk_score += 20
+        if "antivirus" in behavior_lower or "defender" in behavior_lower:
+            matched_techniques.append(mitre_techniques["antivirus_off"])
+            risk_score += 20
+        if "connection" in behavior_lower or "network" in behavior_lower:
+            matched_techniques.append(mitre_techniques["suspicious_connection"])
+            risk_score += 15
+        if "login" in behavior_lower or "failed" in behavior_lower:
+            matched_techniques.append(mitre_techniques["bruteforce"])
+            risk_score += 20
+            
+        if not matched_techniques:
+            keywords = {
+                "login failed": "bruteforce",
+                "failed login": "bruteforce",
+                "malware": "suspicious_process",
+                "virus": "antivirus_off",
+                "ransomware": "suspicious_process",
+                "backdoor": "suspicious_connection",
+                "trojan": "suspicious_process"
+            }
+            for key, tech in keywords.items():
+                if key in behavior_lower:
+                    matched_techniques.append(mitre_techniques[tech])
+                    risk_score += 15
+                    break
+            else:
+                matched_techniques.append(mitre_techniques["default"])
+                risk_score += 10
+        
+        # Determine risk level
+        if risk_score >= 60:
+            mapping_result["risk_level"] = "Critical"
+        elif risk_score >= 40:
+            mapping_result["risk_level"] = "High"
+        elif risk_score >= 20:
+            mapping_result["risk_level"] = "Medium"
+        else:
+            mapping_result["risk_level"] = "Low"
+            
+        mapping_result["techniques"] = matched_techniques
+        mapping_result["summary"] = f"Detected {len(matched_techniques)} MITRE ATT&CK technique(s)"
+        
+    return render_template("mitre-mapper.html", mapping_result=mapping_result, behavior=behavior)
+
+
+@app.route("/ai-security-assistant")
+@premium_required
+def ai_security_assistant():
+    """AI Security Assistant - Analyze reports and provide plain language recommendations"""
+    analysis_result = None
+    
+    # Get system audit data
+    audit_data = get_extended_system_audit()
+    
+    if audit_data:
+        # Analyze and summarize
+        risk_factors = audit_data.get("risk_factors", [])
+        recommendations = audit_data.get("recommendations", [])
+        score = audit_data.get("score", 100)
+        
+        # Determine overall risk
+        if score >= 80:
+            overall_risk = "LOW"
+            risk_color = "#22c55e"
+        elif score >= 60:
+            overall_risk = "MEDIUM"
+            risk_color = "#f59e0b"
+        elif score >= 40:
+            overall_risk = "HIGH"
+            risk_color = "#ef4444"
+        else:
+            overall_risk = "CRITICAL"
+            risk_color = "#dc2626"
+        
+        # Prioritize issues
+        critical_issues = [r for r in risk_factors if r.get("severity") == "critical"]
+        high_issues = [r for r in risk_factors if r.get("severity") == "high"]
+        medium_issues = [r for r in risk_factors if r.get("severity") == "medium"]
+        
+        # Generate plain language summary
+        summary_lines = []
+        summary_lines.append(f"🟢 Overall System Health: {score}%")
+        summary_lines.append(f"🔴 Overall Risk Level: {overall_risk}")
+        summary_lines.append("")
+        
+        if critical_issues:
+            summary_lines.append("🚨 CRITICAL ISSUES:")
+            for idx, issue in enumerate(critical_issues[:3], 1):
+                summary_lines.append(f"  {idx}. {issue.get('detail', '')}")
+            summary_lines.append("")
+        
+        if high_issues:
+            summary_lines.append("⚠️ HIGH PRIORITY ISSUES:")
+            for idx, issue in enumerate(high_issues[:2], 1):
+                summary_lines.append(f"  {idx}. {issue.get('detail', '')}")
+            summary_lines.append("")
+        
+        # Generate action plan
+        action_plan = []
+        if critical_issues:
+            action_plan.append("🚨 IMMEDIATE ACTIONS:")
+            for issue in critical_issues[:2]:
+                if "port" in issue.get("detail", "").lower():
+                    action_plan.append(f"  - Close port {issue.get('detail', '')} immediately")
+                elif "firewall" in issue.get("detail", "").lower():
+                    action_plan.append("  - Enable system firewall immediately")
+                elif "process" in issue.get("detail", "").lower():
+                    action_plan.append("  - Terminate suspicious process and investigate")
+                elif "antivirus" in issue.get("detail", "").lower():
+                    action_plan.append("  - Enable antivirus real-time protection")
+                else:
+                    action_plan.append(f"  - Investigate: {issue.get('detail', '')}")
+                    
+        if high_issues and not critical_issues:
+            action_plan.append("⚠️ RECOMMENDED ACTIONS:")
+            for issue in high_issues:
+                if "patches" in issue.get("detail", "").lower():
+                    action_plan.append("  - Apply pending security updates")
+                elif "connections" in issue.get("detail", "").lower():
+                    action_plan.append("  - Review external network connections")
+                else:
+                    action_plan.append(f"  - Address: {issue.get('detail', '')}")
+        
+        if not critical_issues and not high_issues:
+            action_plan.append("✅ System appears secure!")
+            action_plan.append("  - Continue regular security monitoring")
+            if medium_issues:
+                action_plan.append("  - Address minor issues at your convenience")
+                
+        # Get top recommendations
+        top_recommendations = []
+        if recommendations:
+            for rec in recommendations[:5]:
+                if "✅" in rec:
+                    top_recommendations.append(f"✅ {rec.replace('✅', '').strip()}")
+                elif "⚠" in rec:
+                    top_recommendations.append(f"⚠️ {rec.replace('⚠', '').strip()}")
+                elif "🚨" in rec:
+                    top_recommendations.append(f"🚨 {rec.replace('🚨', '').strip()}")
+                else:
+                    top_recommendations.append(f"• {rec}")
+        
+        analysis_result = {
+            "overall_risk": overall_risk,
+            "risk_color": risk_color,
+            "score": score,
+            "critical_count": len(critical_issues),
+            "high_count": len(high_issues),
+            "medium_count": len(medium_issues),
+            "summary": "\n".join(summary_lines),
+            "action_plan": "\n".join(action_plan),
+            "recommendations": top_recommendations[:5],
+            "risk_factors": risk_factors[:5]
+        }
+    
+    return render_template("ai-security-assistant.html", analysis_result=analysis_result)
 
 
 if __name__ == "__main__":

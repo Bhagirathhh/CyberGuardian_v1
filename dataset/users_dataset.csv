@@ -1,0 +1,9 @@
+username,user_type,last_login,is_active,is_admin,password_age_days,has_2fa,risk_level
+administrator,Local,2024-04-01,Yes,Yes,15,Yes,LOW
+john.doe,Local,2024-03-28,Yes,No,30,No,LOW
+jane.smith,Local,2024-03-15,Yes,Yes,90,No,MEDIUM
+guest,Guest,2023-12-01,Yes,No,365,No,CRITICAL
+backup.service,Service,2024-04-01,Yes,Yes,10,Yes,LOW
+test.user,Local,2024-02-20,Yes,No,180,No,MEDIUM
+bob.wilson,Local,2024-01-05,No,No,250,No,LOW
+sql.admin,Service,2024-04-01,Yes

@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Plans - Cyber Guardian</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #020617, #0f172a, #1e293b);
+            color: #e2e8f0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Navbar */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 18px;
+            backdrop-filter: blur(14px);
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .navbar-brand {
+            font-size: 20px;
+            font-weight: 700;
+            color: #06b6d4;
+            text-decoration: none;
+        }
+
+        .navbar-links {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .navbar-links a {
+            padding: 8px 18px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            color: #94a3b8;
+        }
+
+        .navbar-links a:hover {
+            color: #e2e8f0;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .nav-btn-primary {
+            background: linear-gradient(135deg, #06b6d4, #3b82f6) !important;
+            color: #fff !important;
+        }
+
+        .nav-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.3);
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .header h1 {
+            font-size: clamp(32px, 5vw, 48px);
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #ffd700, #f59e0b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 18px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Pricing Grid */
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-top: 30px;
+        }
+
+        .pricing-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 32px 24px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .pricing-card.popular {
+            border: 2px solid #ffd700;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.08), rgba(245, 158, 11, 0.03));
+        }
+
+        .pricing-card.popular::before {
+            content: '⭐ MOST POPULAR';
+            position: absolute;
+            top: 12px;
+            right: -30px;
+            background: #ffd700;
+            color: #1a1a2e;
+            padding: 4px 40px;
+            font-size: 11px;
+            font-weight: 700;
+            transform: rotate(45deg);
+            letter-spacing: 1px;
+        }
+
+        .pricing-card .plan-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .pricing-card .plan-name {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .pricing-card .plan-price {
+            font-size: 42px;
+            font-weight: 800;
+            margin: 12px 0;
+        }
+
+        .pricing-card .plan-price .currency {
+            font-size: 20px;
+            vertical-align: super;
+        }
+
+        .pricing-card .plan-price .period {
+            font-size: 16px;
+            font-weight: 400;
+            color: #94a3b8;
+        }
+
+        .pricing-card .plan-description {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .pricing-card .features {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .pricing-card .features li {
+            padding: 8px 0;
+            font-size: 14px;
+            color: #cbd5e1;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pricing-card .features li:last-child {
+            border-bottom: none;
+        }
+
+        .pricing-card .features .check {
+            color: #22c55e;
+            font-weight: 700;
+        }
+
+        .pricing-card .features .cross {
+            color: #ef4444;
+            font-weight: 700;
+        }
+
+        .pricing-card .btn {
+            display: inline-block;
+            padding: 12px 32px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 16px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .pricing-card .btn-free {
+            background: rgba(255, 255, 255, 0.05);
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .pricing-card .btn-free:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+        }
+
+        .pricing-card .btn-premium {
+            background: linear-gradient(135deg, #ffd700, #f59e0b);
+            color: #1a1a2e;
+            font-weight: 700;
+        }
+
+        .pricing-card .btn-premium:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(255, 215, 0, 0.4);
+        }
+
+        .pricing-card .btn-premium-outline {
+            background: transparent;
+            color: #ffd700;
+            border: 1px solid #ffd700;
+        }
+
+        .pricing-card .btn-premium-outline:hover {
+            background: rgba(255, 215, 0, 0.1);
+            box-shadow: 0 8px 30px rgba(255, 215, 0, 0.15);
+        }
+
+        .pricing-card .btn-active {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            border: 1px solid #22c55e;
+            cursor: default;
+        }
+
+        .pricing-card .savings-badge {
+            display: inline-block;
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        .footer a {
+            color: #06b6d4;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Flash Messages */
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+
+        .flash-message {
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            animation: slideIn 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .flash-message.success {
+            background: rgba(34, 197, 94, 0.18);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.25);
+        }
+
+        .flash-message.danger {
+            background: rgba(239, 68, 68, 0.18);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        .flash-message.warning {
+            background: rgba(234, 179, 8, 0.18);
+            color: #facc15;
+            border: 1px solid rgba(234, 179, 8, 0.25);
+        }
+
+        .flash-message.info {
+            background: rgba(59, 130, 246, 0.18);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.25);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 20px 10px;
+            }
+
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .navbar {
+                flex-direction: column;
+                align-items: center;
+                padding: 14px 16px;
+            }
+
+            .navbar-links {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Navbar -->
+        <nav class="navbar">
+            <a href="/" class="navbar-brand">🛡️ Cyber Guardian</a>
+            <div class="navbar-links">
+                <a href="/">🏠 Home</a>
+                {% if session.user_id %}
+                    {% if session.plan == 'premium' %}
+                        <a href="/audit" style="color:#ffd700;">⭐ Dashboard</a>
+                    {% else %}
+                        <a href="/pricing" style="color:#ffd700;">⭐ Upgrade</a>
+                    {% endif %}
+                    <a href="/logout">🚪 Logout</a>
+                {% else %}
+                    <a href="/login" class="nav-btn-primary">🔐 Login</a>
+                    <a href="/register">📝 Register</a>
+                {% endif %}
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+            <div class="flash-message {{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Header -->
+        <div class="header">
+            <h1>⭐ Choose Your Premium Plan</h1>
+            <p>Unlock advanced security features and protect your system like a pro</p>
+        </div>
+
+        <!-- Pricing Cards -->
+        <div class="pricing-grid">
+            <!-- Free Plan -->
+            <div class="pricing-card">
+                <div class="plan-icon">🔓</div>
+                <div class="plan-name">Free</div>
+                <div class="plan-price">
+                    <span class="currency">₹</span>0
+                    <span class="period">/ forever</span>
+                </div>
+                <p class="plan-description">Basic security tools for everyone</p>
+                <ul class="features">
+                    <li><span class="check">✅</span> Password Analyzer</li>
+                    <li><span class="check">✅</span> Password Generator</li>
+                    <li><span class="check">✅</span> Hash Generator</li>
+                    <li><span class="check">✅</span> URL Scanner (5/day)</li>
+                    <li><span class="check">✅</span> File Integrity Checker</li>
+                    <li><span class="check">✅</span> Live Monitor</li>
+                    <li><span class="cross">❌</span> System Audit Tools</li>
+                    <li><span class="cross">❌</span> Advanced Threat Detection</li>
+                    <li><span class="cross">❌</span> PDF Reports</li>
+                </ul>
+                {% if session.user_id %}
+                    <button class="btn btn-free" disabled>✅ Current Plan</button>
+                {% else %}
+                    <a href="/register" class="btn btn-free">📝 Get Started</a>
+                {% endif %}
+            </div>
+
+            <!-- Monthly Premium -->
+            <div class="pricing-card popular">
+                <div class="plan-icon">⭐</div>
+                <div class="plan-name" style="color:#ffd700;">Premium Monthly</div>
+                <div class="plan-price" style="color:#ffd700;">
+                    <span class="currency">₹</span>100
+                    <span class="period">/ month</span>
+                </div>
+                <p class="plan-description">Full access to all premium features</p>
+                <ul class="features">
+                    <li><span class="check">✅</span> Everything in Free</li>
+                    <li><span class="check">✅</span> Complete System Audit</li>
+                    <li><span class="check">✅</span> Advanced Threat Detection</li>
+                    <li><span class="check">✅</span> PDF Reports</li>
+                    <li><span class="check">✅</span> Unlimited URL Scans</li>
+                    <li><span class="check">✅</span> AI Security Assistant</li>
+                    <li><span class="check">✅</span> MITRE ATT&CK Mapping</li>
+                    <li><span class="check">✅</span> Priority Support</li>
+                </ul>
+                {% if session.user_id and session.plan == 'premium' %}
+                    <button class="btn btn-active">✅ Active</button>
+                {% elif session.user_id %}
+                    <!-- ✅ UPDATED: action="/upgrade" → action="/create-payment" -->
+                    <form action="/create-payment" method="POST">
+                        <input type="hidden" name="plan" value="monthly">
+                        <button type="submit" class="btn btn-premium">🚀 Upgrade Now - ₹100</button>
+                    </form>
+                {% else %}
+                    <a href="/register" class="btn btn-premium">🚀 Get Started</a>
+                {% endif %}
+            </div>
+
+            <!-- Yearly Premium -->
+            <div class="pricing-card">
+                <div class="plan-icon">🌟</div>
+                <div class="plan-name" style="color:#ffd700;">Premium Yearly</div>
+                <div class="plan-price" style="color:#ffd700;">
+                    <span class="currency">₹</span>1,000
+                    <span class="period">/ year</span>
+                </div>
+                <span class="savings-badge">💫 Save ₹200</span>
+                <p class="plan-description">Best value with 2 months free</p>
+                <ul class="features">
+                    <li><span class="check">✅</span> Everything in Monthly</li>
+                    <li><span class="check">✅</span> 2 Months FREE</li>
+                    <li><span class="check">✅</span> Priority Support</li>
+                    <li><span class="check">✅</span> Early Access to New Features</li>
+                    <li><span class="check">✅</span> 30-Day Money Back Guarantee</li>
+                </ul>
+                {% if session.user_id and session.plan == 'premium' %}
+                    <button class="btn btn-active">✅ Active</button>
+                {% elif session.user_id %}
+                    <!-- ✅ UPDATED: action="/upgrade" → action="/create-payment" -->
+                    <form action="/create-payment" method="POST">
+                        <input type="hidden" name="plan" value="yearly">
+                        <button type="submit" class="btn btn-premium-outline">🎯 Upgrade Now - ₹1,000</button>
+                    </form>
+                {% else %}
+                    <a href="/register" class="btn btn-premium-outline">🎯 Get Started</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Comparison Table -->
+        <div style="margin-top: 50px; background: rgba(255,255,255,0.03); border-radius: 18px; padding: 30px; border: 1px solid rgba(255,255,255,0.06); overflow-x: auto;">
+            <h3 style="text-align:center; margin-bottom:20px; color:#ffd700;">📊 Feature Comparison</h3>
+            <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                <thead>
+                    <tr style="border-bottom:2px solid rgba(255,255,255,0.1);">
+                        <th style="padding:12px; text-align:left;">Feature</th>
+                        <th style="padding:12px; text-align:center;">Free</th>
+                        <th style="padding:12px; text-align:center; color:#ffd700;">Premium</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:12px;">Password Tools</td>
+                        <td style="padding:12px; text-align:center;">✅</td>
+                        <td style="padding:12px; text-align:center; color:#ffd700;">✅</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:12px;">URL Scanner</td>
+                        <td style="padding:12px; text-align:center;">5/day</td>
+                        <td style="padding:12px; text-align:center; color:#ffd700;">Unlimited</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:12px;">System Audit</td>
+                        <td style="padding:12px; text-align:center;">❌</td>
+                        <td style="padding:12px; text-align:center; color:#ffd700;">✅</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:12px;">PDF Reports</td>
+                        <td style="padding:12px; text-align:center;">❌</td>
+                        <td style="padding:12px; text-align:center; color:#ffd700;">✅</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:12px;">Advanced Threat Detection</td>
+                        <td style="padding:12px; text-align:center;">❌</td>
+                        <td style="padding:12px; text-align:center; color:#ffd700;">✅</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:12px;">AI Security Assistant</td>
+                        <td style="padding:12px; text-align:center;">❌</td>
+                        <td style="padding:12px; text-align:center; color:#ffd700;">✅</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:12px;">MITRE ATT&CK Mapping</td>
+                        <td style="padding:12px; text-align:center;">❌</td>
+                        <td style="padding:12px; text-align:center; color:#ffd700;">✅</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:12px;">Priority Support</td>
+                        <td style="padding:12px; text-align:center;">❌</td>
+                        <td style="padding:12px; text-align:center; color:#ffd700;">✅</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            Cyber Guardian Security Suite v2.0 © 2026 |
+            <a href="/">Home</a> |
+            <a href="/pricing" style="color:#ffd700;">Pricing</a>
+        </div>
+    </div>
+</body>
+</html>

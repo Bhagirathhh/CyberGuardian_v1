@@ -1,0 +1,32 @@
+port,service,protocol,risk_level,description,cve_count,default_service
+21,FTP,TCP,CRITICAL,File Transfer Protocol - often vulnerable to anonymous access and brute force,45,vsftpd
+22,SSH,TCP,MEDIUM,Secure Shell - secure remote access but vulnerable to brute force,12,OpenSSH
+23,Telnet,TCP,CRITICAL,Unencrypted remote access - transmits credentials in plaintext,38,telnetd
+25,SMTP,TCP,HIGH,Simple Mail Transfer Protocol - vulnerable to spoofing and relay,52,Postfix
+53,DNS,TCP/UDP,MEDIUM,Domain Name System - vulnerable to cache poisoning and DDoS,29,BIND
+80,HTTP,TCP,HIGH,Hypertext Transfer Protocol - unencrypted web traffic,67,Apache/Nginx
+110,POP3,TCP,HIGH,Post Office Protocol - unencrypted email retrieval,23,Dovecot
+135,RPC,TCP,CRITICAL,Remote Procedure Call - frequently exploited in Windows,41,Microsoft RPC
+139,NetBIOS,TCP,CRITICAL,NetBIOS Session Service - legacy Windows networking,56,Samba
+143,IMAP,TCP,MEDIUM,Internet Message Access Protocol - email access,19,Dovecot
+389,LDAP,TCP,HIGH,Lightweight Directory Access Protocol - directory services,33,OpenLDAP
+443,HTTPS,TCP,LOW,HTTP Secure - encrypted web traffic (recommended),8,Nginx/Apache
+445,SMB,TCP,CRITICAL,Server Message Block - file sharing frequently exploited by ransomware,78,Samba
+636,LDAPS,TCP,LOW,Secure LDAP - encrypted directory services,3,OpenLDAP
+993,IMAPS,TCP,LOW,Secure IMAP - encrypted email access,2,Dovecot
+995,POP3S,TCP,LOW,Secure POP3 - encrypted email retrieval,2,Dovecot
+1433,MSSQL,TCP,HIGH,Microsoft SQL Server - database service,44,Microsoft SQL Server
+1521,Oracle,TCP,HIGH,Oracle Database - enterprise database,38,Oracle DB
+2049,NFS,TCP,HIGH,Network File System - file sharing vulnerable to misconfiguration,27,nfs-kernel-server
+3306,MySQL,TCP,HIGH,MySQL Database - popular open-source database,31,MySQL/MariaDB
+3389,RDP,TCP,CRITICAL,Remote Desktop Protocol - frequently targeted for RDP attacks,62,xrdp
+5432,PostgreSQL,TCP,MEDIUM,PostgreSQL Database - advanced open-source database,19,PostgreSQL
+5900,VNC,TCP,HIGH,Virtual Network Computing - remote desktop often without encryption,34,TightVNC
+5985,WinRM,TCP,MEDIUM,Windows Remote Management - PowerShell remote access,11,Windows WinRM
+5986,WinRM-HTTPS,TCP,LOW,Windows Remote Management over HTTPS - secure remote access,3,Windows WinRM
+6379,Redis,TCP,HIGH,Redis - in-memory database often vulnerable to RCE if exposed,25,redis-server
+8080,HTTP-Proxy,TCP,MEDIUM,HTTP Alternate - commonly used for proxies and dev servers,22,Apache Tomcat
+8443,HTTPS-Alt,TCP,LOW,HTTPS Alternate - commonly used for secure dev servers,6,Apache Tomcat
+9090,Prometheus,TCP,MEDIUM,Prometheus monitoring - can leak system metrics,9,Prometheus
+9200,Elasticsearch,TCP,HIGH,Elasticsearch - vulnerable to data exposure if unauthenticated,36,Elasticsearch
+27017,MongoDB,TCP,HIGH,MongoDB - frequently exposed without authentication,29,MongoDB

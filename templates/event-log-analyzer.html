@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Windows Event Log Analyzer | Cyber Guardian</title>
+<style>
+:root{
+  --bg1:#020617; --bg2:#0f172a; --bg3:#1e293b;
+  --glass:rgba(255,255,255,0.08); --glass-border:rgba(255,255,255,0.12);
+  --text:#e2e8f0; --muted:#94a3b8; --cyan:#06b6d4; --blue:#3b82f6;
+  --green:#22c55e; --amber:#f59e0b; --red:#ef4444; --purple:#8b5cf6;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif;}
+html{height:100%;overflow-x:hidden;}
+body{
+  min-height:100dvh;
+  background:
+    radial-gradient(circle at top left, rgba(139,92,246,.12), transparent 30%),
+    radial-gradient(circle at top right, rgba(6,182,212,.14), transparent 28%),
+    linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+  color:var(--text); overflow-x:hidden; position:relative;
+}
+body::before{
+  content:''; position:fixed; inset:0;
+  background: radial-gradient(circle, rgba(139,92,246,0.05) 1px, transparent 1px);
+  background-size:40px 40px; animation:gridMove 30s linear infinite;
+  pointer-events:none; z-index:0;
+}
+@keyframes gridMove{ from{transform:translate3d(0,0,0);} to{transform:translate3d(-200px,-200px,0);} }
+.container{position:relative;z-index:1;width:min(1200px, calc(100vw - 32px));margin:0 auto;padding:40px 0 36px;}
+.navbar{
+  display:flex;justify-content:space-between;align-items:center;padding:16px 24px;
+  margin-bottom:24px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+  border-radius:18px;backdrop-filter:blur(14px);
+}
+.navbar-brand{font-size:20px;font-weight:700;color:var(--cyan);text-decoration:none;}
+.navbar-links{display:flex;align-items:center;gap:12px;}
+.nav-link{padding:8px 18px;border-radius:10px;font-size:14px;font-weight:500;text-decoration:none;color:var(--muted);transition:all 0.25s;}
+.nav-link:hover{color:var(--text);background:rgba(255,255,255,0.06);}
+.nav-btn-outline{border:1px solid rgba(255,255,255,0.2);color:var(--text);padding:8px 18px;border-radius:10px;text-decoration:none;transition:all 0.25s;}
+.nav-btn-outline:hover{border-color:var(--cyan);background:rgba(6,182,212,0.08);}
+.nav-btn-primary{
+  background:linear-gradient(135deg,var(--cyan),var(--blue));color:#fff!important;
+  padding:8px 18px;border-radius:10px;text-decoration:none;border:none;cursor:pointer;transition:all 0.25s;
+}
+.nav-btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(6,182,212,0.3);}
+h1{font-size:clamp(28px,5vw,42px);margin-bottom:8px;text-shadow:0 0 20px rgba(139,92,246,0.25);}
+.subtitle{color:var(--muted);font-size:16px;margin-bottom:28px;}
+.section-header{display:flex;align-items:center;gap:12px;margin:30px 0 14px;}
+.section-header h2{font-size:22px;font-weight:700;}
+.line{flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,0.15),transparent);}
+.dashboard-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px;
+}
+.stat-card{
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);
+  border-radius:18px;padding:20px;text-align:center;backdrop-filter:blur(14px);
+  transition:.28s ease;
+}
+.stat-card:hover{transform:translateY(-4px);border-color:rgba(6,182,212,.3);}
+.stat-number{font-size:32px;font-weight:800;margin-bottom:4px;}
+.stat-label{color:var(--muted);font-size:13px;}
+.stat-critical .stat-number{color:var(--red);}
+.stat-warning .stat-number{color:var(--amber);}
+.stat-info .stat-number{color:var(--cyan);}
+.stat-success .stat-number{color:var(--green);}
+.log-item{
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);
+  border-radius:14px;padding:16px;margin-bottom:12px;transition:.28s ease;
+}
+.log-item:hover{transform:translateX(4px);}
+.log-item.critical{border-left:4px solid var(--red);}
+.log-item.warning{border-left:4px solid var(--amber);}
+.log-item.info{border-left:4px solid var(--cyan);}
+.log-item.success{border-left:4px solid var(--green);}
+.log-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:8px;}
+.log-title{font-size:16px;font-weight:600;}
+.log-badge{
+  padding:4px 12px;border-radius:999px;font-size:11px;font-weight:600;text-transform:uppercase;
+}
+.log-badge.critical{background:rgba(239,68,68,0.2);color:var(--red);}
+.log-badge.warning{background:rgba(245,158,11,0.2);color:var(--amber);}
+.log-badge.info{background:rgba(6,182,212,0.2);color:var(--cyan);}
+.log-badge.success{background:rgba(34,197,94,0.2);color:var(--green);}
+.log-detail{color:var(--muted);font-size:14px;line-height:1.6;}
+.log-time{color:var(--muted);font-size:12px;margin-top:4px;}
+.empty-state{
+  text-align:center;padding:40px;background:rgba(255,255,255,0.04);
+  border-radius:18px;border:1px dashed rgba(255,255,255,0.1);
+}
+.empty-state h3{color:var(--muted);margin-bottom:8px;}
+.empty-state p{color:var(--muted);font-size:14px;}
+.footer{margin-top:34px;text-align:center;color:var(--muted);font-size:13px;}
+@media(max-width:640px){
+  .container{width:min(100vw - 20px,1200px);padding-top:24px;}
+  .navbar{flex-direction:column;gap:12px;padding:14px 16px;}
+  .dashboard-grid{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">🛡️ Cyber Guardian</a>
+    <div class="navbar-links">
+      <a href="/" class="nav-link">← Dashboard</a>
+      <a href="/audit" class="nav-btn-primary">🔍 Run Full Audit</a>
+      <a href="/history" class="nav-link">📋 History</a>
+      <a href="/logout" class="nav-btn-outline">🚪 Logout</a>
+    </div>
+  </nav>
+
+  <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.25);border-radius:999px;color:#a78bfa;font-size:13px;font-weight:600;margin-bottom:16px;">
+    📋 Windows Event Log Analyzer
+  </div>
+
+  <h1>Windows Event Log Analysis</h1>
+  <p class="subtitle">Computer ke Windows logs check karega aur suspicious activity dikhayega.</p>
+
+  <div class="dashboard-grid">
+    <div class="stat-card stat-critical">
+      <div class="stat-number">{{ activity.failed_logins|default(0) }}</div>
+      <div class="stat-label">⚠️ Failed Login Attempts</div>
+    </div>
+    <div class="stat-card stat-warning">
+      <div class="stat-number">{{ activity.suspicious_powershell|default([])|length }}</div>
+      <div class="stat-label">🔴 Suspicious PowerShell</div>
+    </div>
+    <div class="stat-card stat-warning">
+      <div class="stat-number">{{ activity.account_failures|default([])|length }}</div>
+      <div class="stat-label">⚠️ Account Failures</div>
+    </div>
+    <div class="stat-card stat-info">
+      <div class="stat-number">{{ activity.total_events|default(0) }}</div>
+      <div class="stat-label">📊 Total Events</div>
+    </div>
+  </div>
+
+  {% if activity.suspicious_powershell and activity.suspicious_powershell|length > 0 %}
+  <div class="section-header"><h2>🔴 Suspicious PowerShell Activity</h2><div class="line"></div></div>
+  {% for cmd in activity.suspicious_powershell %}
+  <div class="log-item critical">
+    <div class="log-header">
+      <span class="log-title">PowerShell Command</span>
+      <span class="log-badge critical">⚠️ Suspicious</span>
+    </div>
+    <div class="log-detail"><code style="color:#e2e8f0;font-size:13px;">{{ cmd }}</code></div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if activity.account_failures and activity.account_failures|length > 0 %}
+  <div class="section-header"><h2>⚠️ Failed Login Attempts from IPs</h2><div class="line"></div></div>
+  {% for ip in activity.account_failures %}
+  <div class="log-item warning">
+    <div class="log-header">
+      <span class="log-title">IP Address: {{ ip }}</span>
+      <span class="log-badge warning">Failed Login</span>
+    </div>
+    <div class="log-detail">Multiple failed login attempts detected from this IP address.</div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if activity.message %}
+  <div class="log-item info" style="border-left-color:var(--blue);">
+    <div class="log-header">
+      <span class="log-title">ℹ️ System Message</span>
+      <span class="log-badge info">Info</span>
+    </div>
+    <div class="log-detail">{{ activity.message }}</div>
+  </div>
+  {% endif %}
+
+  {% if not activity.suspicious_powershell and not activity.account_failures and not activity.message %}
+  <div class="empty-state">
+    <h3>✅ No Suspicious Activity Found</h3>
+    <p>Windows Event Logs appear clean. No suspicious PowerShell or failed login attempts detected.</p>
+  </div>
+  {% endif %}
+
+  <div class="footer">Cyber Guardian Security Suite v2.0 © 2026 | Windows Event Log Analyzer</div>
+</div>
+</body>
+</html>

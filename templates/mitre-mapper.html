@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MITRE ATT&CK Mapper | Cyber Guardian</title>
+<style>
+:root{
+  --bg1:#020617; --bg2:#0f172a; --bg3:#1e293b;
+  --glass:rgba(255,255,255,0.08); --glass-border:rgba(255,255,255,0.12);
+  --text:#e2e8f0; --muted:#94a3b8; --cyan:#06b6d4; --blue:#3b82f6;
+  --green:#22c55e; --amber:#f59e0b; --red:#ef4444; --purple:#8b5cf6;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif;}
+html{height:100%;overflow-x:hidden;}
+body{
+  min-height:100dvh;
+  background:
+    radial-gradient(circle at top left, rgba(139,92,246,.12), transparent 30%),
+    radial-gradient(circle at top right, rgba(6,182,212,.14), transparent 28%),
+    linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+  color:var(--text); overflow-x:hidden; position:relative;
+}
+body::before{
+  content:''; position:fixed; inset:0;
+  background: radial-gradient(circle, rgba(139,92,246,0.05) 1px, transparent 1px);
+  background-size:40px 40px; animation:gridMove 30s linear infinite;
+  pointer-events:none; z-index:0;
+}
+@keyframes gridMove{ from{transform:translate3d(0,0,0);} to{transform:translate3d(-200px,-200px,0);} }
+.container{position:relative;z-index:1;width:min(1200px, calc(100vw - 32px));margin:0 auto;padding:40px 0 36px;}
+.navbar{
+  display:flex;justify-content:space-between;align-items:center;padding:16px 24px;
+  margin-bottom:24px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+  border-radius:18px;backdrop-filter:blur(14px);
+}
+.navbar-brand{font-size:20px;font-weight:700;color:var(--cyan);text-decoration:none;}
+.navbar-links{display:flex;align-items:center;gap:12px;}
+.nav-link{padding:8px 18px;border-radius:10px;font-size:14px;font-weight:500;text-decoration:none;color:var(--muted);transition:all 0.25s;}
+.nav-link:hover{color:var(--text);background:rgba(255,255,255,0.06);}
+.nav-btn-outline{border:1px solid rgba(255,255,255,0.2);color:var(--text);padding:8px 18px;border-radius:10px;text-decoration:none;transition:all 0.25s;}
+.nav-btn-outline:hover{border-color:var(--cyan);background:rgba(6,182,212,0.08);}
+.nav-btn-primary{
+  background:linear-gradient(135deg,var(--cyan),var(--blue));color:#fff!important;
+  padding:8px 18px;border-radius:10px;text-decoration:none;border:none;cursor:pointer;transition:all 0.25s;
+}
+.nav-btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(6,182,212,0.3);}
+h1{font-size:clamp(28px,5vw,42px);margin-bottom:8px;text-shadow:0 0 20px rgba(139,92,246,0.25);}
+.subtitle{color:var(--muted);font-size:16px;margin-bottom:28px;}
+.section-header{display:flex;align-items:center;gap:12px;margin:30px 0 14px;}
+.section-header h2{font-size:22px;font-weight:700;}
+.line{flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,0.15),transparent);}
+.search-box{
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);
+  border-radius:18px;padding:24px;backdrop-filter:blur(14px);margin-bottom:24px;
+}
+.search-form{
+  display:flex;flex-wrap:wrap;gap:12px;align-items:center;
+}
+.search-form input{
+  flex:1;min-width:200px;padding:10px 16px;border-radius:10px;
+  background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);
+  color:var(--text);font-size:14px;
+}
+.search-form input:focus{outline:2px solid var(--cyan);border-color:transparent;}
+.search-form input::placeholder{color:var(--muted);}
+.search-form button{padding:10px 28px;}
+.result-card{
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);
+  border-radius:18px;padding:24px;backdrop-filter:blur(14px);margin-top:20px;
+}
+.result-header{
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
+  margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.result-behavior{
+  font-size:18px;font-weight:700;color:var(--cyan);
+}
+.result-risk{
+  padding:6px 16px;border-radius:999px;font-size:13px;font-weight:600;
+}
+.result-risk.critical{background:rgba(239,68,68,0.2);color:var(--red);}
+.result-risk.high{background:rgba(245,158,11,0.2);color:var(--amber);}
+.result-risk.medium{background:rgba(245,158,11,0.15);color:#f59e0b;}
+.result-risk.low{background:rgba(34,197,94,0.2);color:var(--green);}
+.technique-card{
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+  border-radius:14px;padding:16px;margin-bottom:14px;
+}
+.technique-header{
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;
+}
+.technique-id{
+  font-size:18px;font-weight:700;color:var(--cyan);
+}
+.technique-name{font-size:16px;font-weight:600;color:var(--text);}
+.technique-tactic{
+  padding:4px 12px;border-radius:999px;font-size:11px;font-weight:600;
+  background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.2);
+}
+.technique-detail{
+  margin-top:10px;padding:12px 16px;border-radius:10px;
+  background:rgba(255,255,255,0.03);border-left:3px solid var(--cyan);
+}
+.technique-detail p{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:6px;}
+.technique-detail strong{color:var(--text);}
+.technique-mitigation{
+  margin-top:10px;padding:12px 16px;border-radius:10px;
+  background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.1);
+}
+.technique-mitigation h4{color:var(--green);font-size:14px;margin-bottom:4px;}
+.technique-mitigation p{color:var(--muted);font-size:13px;line-height:1.6;}
+.technique-detection{
+  margin-top:8px;padding:12px 16px;border-radius:10px;
+  background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.1);
+}
+.technique-detection h4{color:var(--blue);font-size:14px;margin-bottom:4px;}
+.technique-detection p{color:var(--muted);font-size:13px;line-height:1.6;}
+.empty-state{
+  text-align:center;padding:40px;background:rgba(255,255,255,0.04);
+  border-radius:18px;border:1px dashed rgba(255,255,255,0.1);
+}
+.empty-state h3{color:var(--muted);margin-bottom:8px;}
+.empty-state p{color:var(--muted);font-size:14px;max-width:400px;margin:8px auto 0;}
+.example-tags{
+  display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center;
+}
+.example-tag{
+  padding:4px 14px;border-radius:999px;font-size:12px;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);
+  color:var(--muted);cursor:pointer;transition:.2s;
+}
+.example-tag:hover{background:rgba(6,182,212,0.1);border-color:var(--cyan);color:var(--text);}
+.footer{margin-top:34px;text-align:center;color:var(--muted);font-size:13px;}
+@media(max-width:640px){
+  .container{width:min(100vw - 20px,1200px);padding-top:24px;}
+  .navbar{flex-direction:column;gap:12px;padding:14px 16px;}
+  .search-form{flex-direction:column;}
+  .search-form input,.search-form button{width:100%;}
+  .technique-header{flex-direction:column;align-items:flex-start;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">🛡️ Cyber Guardian</a>
+    <div class="navbar-links">
+      <a href="/" class="nav-link">← Dashboard</a>
+      <a href="/audit" class="nav-btn-primary">🔍 Run Full Audit</a>
+      <a href="/history" class="nav-link">📋 History</a>
+      <a href="/logout" class="nav-btn-outline">🚪 Logout</a>
+    </div>
+  </nav>
+
+  <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.25);border-radius:999px;color:#a78bfa;font-size:13px;font-weight:600;margin-bottom:16px;">
+    🎯 MITRE ATT&CK Mapping
+  </div>
+
+  <h1>MITRE ATT&CK Framework Mapper</h1>
+  <p class="subtitle">Agar Cyber Guardian koi suspicious behavior detect karta hai, to bataye:</p>
+
+  <div class="search-box">
+    <form method="POST" class="search-form">
+      <input type="text" name="behavior" placeholder="Enter suspicious behavior (e.g., 'Suspicious PowerShell', 'Port 445 exposed', 'Firewall disabled')" value="{{ behavior or '' }}" required>
+      <button type="submit" class="nav-btn-primary">🎯 Map to MITRE</button>
+    </form>
+    <div class="example-tags">
+      <span class="example-tag" onclick="document.querySelector('input[name=behavior]').value='Suspicious PowerShell'; this.closest('form').submit();">💻 PowerShell</span>
+      <span class="example-tag" onclick="document.querySelector('input[name=behavior]').value='Port 445 exposed'; this.closest('form').submit();">🔌 Port 445</span>
+      <span class="example-tag" onclick="document.querySelector('input[name=behavior]').value='Firewall turned off'; this.closest('form').submit();">🔥 Firewall</span>
+      <span class="example-tag" onclick="document.querySelector('input[name=behavior]').value='Antivirus disabled'; this.closest('form').submit();">🛡️ AV Disabled</span>
+      <span class="example-tag" onclick="document.querySelector('input[name=behavior]').value='Multiple failed logins'; this.closest('form').submit();">🔑 Brute Force</span>
+      <span class="example-tag" onclick="document.querySelector('input[name=behavior]').value='Suspicious network connection'; this.closest('form').submit();">🌐 C2 Connection</span>
+    </div>
+  </div>
+
+  {% if mapping_result %}
+  <div class="result-card">
+    <div class="result-header">
+      <div class="result-behavior">🎯 {{ mapping_result.behavior }}</div>
+      <div class="result-risk 
+        {% if mapping_result.risk_level == 'Critical' %}critical
+        {% elif mapping_result.risk_level == 'High' %}high
+        {% elif mapping_result.risk_level == 'Medium' %}medium
+        {% else %}low{% endif %}">
+        {{ mapping_result.risk_level }} RISK
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px;color:var(--muted);font-size:14px;">
+      {{ mapping_result.summary }}
+    </div>
+
+    {% for technique in mapping_result.techniques %}
+    <div class="technique-card">
+      <div class="technique-header">
+        <div>
+          <span class="technique-id">{{ technique.technique }}</span>
+          <span class="technique-name">{{ technique.name }}</span>
+        </div>
+        <span class="technique-tactic">{{ technique.tactic }}</span>
+      </div>
+      
+      <div class="technique-detail">
+        <p><strong>Description:</strong> {{ technique.description }}</p>
+      </div>
+      
+      <div class="technique-mitigation">
+        <h4>🛡️ Mitigation</h4>
+        <p>{{ technique.mitigation }}</p>
+      </div>
+      
+      <div class="technique-detection">
+        <h4>🔍 Detection</h4>
+        <p>{{ technique.detection }}</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% elif request.method == 'POST' %}
+  <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);border-radius:18px;padding:20px;text-align:center;">
+    <p style="color:var(--amber);">⚠️ Please enter a behavior to map to MITRE ATT&CK techniques.</p>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div style="font-size:48px;margin-bottom:12px;">🎯</div>
+    <h3>Enter a Suspicious Behavior to Map</h3>
+    <p>Enter any suspicious activity detected on your system and Cyber Guardian will map it to the MITRE ATT&CK framework.</p>
+    <p style="margin-top:8px;font-size:13px;color:var(--muted);">
+      Examples: Suspicious PowerShell, Port 445 exposed, Firewall turned off, Multiple failed logins
+    </p>
+  </div>
+  {% endif %}
+
+  <div class="footer">Cyber Guardian Security Suite v2.0 © 2026 | MITRE ATT&CK Mapper</div>
+</div>
+
+<script>
+// Auto-submit on example tag click
+document.querySelectorAll('.example-tag').forEach(tag => {
+  tag.addEventListener('click', function() {
+    const input = document.querySelector('input[name="behavior"]');
+    input.value = this.textContent.trim();
+    this.closest('form').submit();
+  });
+});
+</script>
+</body>
+</html>
