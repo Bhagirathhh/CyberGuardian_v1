@@ -90,6 +90,22 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
         );
+        CREATE TABLE IF NOT EXISTS agent_scans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            agent_id TEXT,
+            score INTEGER,
+            grade TEXT,
+            os_name TEXT,
+            hostname TEXT,
+            local_ip TEXT,
+            cpu_usage REAL,
+            ram_percent REAL,
+            disk_percent REAL,
+            recommendations TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
     ''')
     conn.commit()
     conn.close()
@@ -105,6 +121,9 @@ if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
     print("Please add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env file")
 
 razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+
+# --- Agent API Key ---
+AGENT_API_KEY = os.getenv("AGENT_API_KEY", "cyber-guardian-agent-secret-key-2026")
 
 # --- Login Decorator ---
 def login_required(f):
@@ -329,7 +348,132 @@ def analyze_url_ai(url):
     return ("✅ Safe Website", "#22c55e", 100 - confidence, reasons)
 
 
-# ===================== NEW FEATURES =====================
+# ===================== AGENT API ROUTES =====================
+
+@app.route('/api/agent/scan', methods=['POST'])
+@login_required
+def agent_scan():
+    """
+    Agent from user's PC sends system data here
+    """
+    try:
+        data = request.get_json()
+        
+        # Validate API Key (security)
+        api_key = request.headers.get('X-API-Key')
+        if not api_key or api_key != AGENT_API_KEY:
+            return jsonify({"error": "Invalid API Key"}), 401
+        
+        # Extract data
+        score = data.get('score', 0)
+        grade = data.get('grade', 'F')
+        os_name = data.get('os_name', 'Unknown')
+        hostname = data.get('hostname', 'Unknown')
+        local_ip = data.get('local_ip', 'Unknown')
+        cpu_usage = data.get('cpu_usage', 0)
+        ram_percent = data.get('ram_percent', 0)
+        disk_percent = data.get('disk_percent', 0)
+        recommendations = data.get('recommendations', [])
+        agent_id = data.get('agent_id', 'unknown')
+        
+        # Save scan data to database
+        conn = get_db()
+        conn.execute(
+            """INSERT INTO agent_scans 
+               (user_id, agent_id, score, grade, os_name, hostname, local_ip, 
+                cpu_usage, ram_percent, disk_percent, recommendations)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (session["user_id"], agent_id, score, grade, os_name, hostname, local_ip,
+             cpu_usage, ram_percent, disk_percent, json.dumps(recommendations))
+        )
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "success": True, 
+            "message": "Scan data saved!",
+            "scan_id": conn.lastrowid if hasattr(conn, 'lastrowid') else None
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/agent/download', methods=['GET'])
+@login_required
+def download_agent():
+    """
+    User downloads the agent script
+    """
+    try:
+        # Check if agent.py exists, if not create it
+        agent_file = 'agent.py'
+        if not os.path.exists(agent_file):
+            return jsonify({"error": "Agent file not found. Please contact support."}), 404
+        
+        return send_file(agent_file, as_attachment=True, download_name='cyber_guardian_agent.py')
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/agent/status', methods=['GET'])
+@login_required
+def agent_status():
+    """
+    Get status of agent scans
+    """
+    conn = get_db()
+    scans = conn.execute(
+        "SELECT * FROM agent_scans WHERE user_id = ? ORDER BY created_at DESC LIMIT 10",
+        (session["user_id"],)
+    ).fetchall()
+    conn.close()
+    
+    scans_list = []
+    for scan in scans:
+        scans_list.append({
+            "id": scan['id'],
+            "agent_id": scan['agent_id'],
+            "score": scan['score'],
+            "grade": scan['grade'],
+            "os_name": scan['os_name'],
+            "hostname": scan['hostname'],
+            "created_at": scan['created_at']
+        })
+    
+    return jsonify({"scans": scans_list})
+
+@app.route('/api/agent/scan/<int:scan_id>', methods=['GET'])
+@login_required
+def get_agent_scan(scan_id):
+    """
+    Get specific agent scan details
+    """
+    conn = get_db()
+    scan = conn.execute(
+        "SELECT * FROM agent_scans WHERE id = ? AND user_id = ?",
+        (scan_id, session["user_id"])
+    ).fetchone()
+    conn.close()
+    
+    if not scan:
+        return jsonify({"error": "Scan not found"}), 404
+    
+    return jsonify({
+        "id": scan['id'],
+        "score": scan['score'],
+        "grade": scan['grade'],
+        "os_name": scan['os_name'],
+        "hostname": scan['hostname'],
+        "local_ip": scan['local_ip'],
+        "cpu_usage": scan['cpu_usage'],
+        "ram_percent": scan['ram_percent'],
+        "disk_percent": scan['disk_percent'],
+        "recommendations": json.loads(scan['recommendations']) if scan['recommendations'] else [],
+        "created_at": scan['created_at']
+    })
+
+
+# ===================== EXISTING FEATURES =====================
 
 def scan_open_ports():
     """🔌 Feature 1: Scan open ports and detect running services"""
@@ -1245,8 +1389,12 @@ def history():
         "SELECT * FROM url_scan_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 50",
         (session["user_id"],)
     ).fetchall()
+    agent_scans = conn.execute(
+        "SELECT * FROM agent_scans WHERE user_id = ? ORDER BY created_at DESC LIMIT 50",
+        (session["user_id"],)
+    ).fetchall()
     conn.close()
-    return render_template("history.html", audits=audits, scans=scans)
+    return render_template("history.html", audits=audits, scans=scans, agent_scans=agent_scans)
 
 
 @app.route("/live-monitor")
@@ -1481,6 +1629,8 @@ def delete_history():
         conn.execute("DELETE FROM audit_history WHERE id = ? AND user_id = ?", (record_id, session["user_id"]))
     elif record_type == "scan":
         conn.execute("DELETE FROM url_scan_history WHERE id = ? AND user_id = ?", (record_id, session["user_id"]))
+    elif record_type == "agent":
+        conn.execute("DELETE FROM agent_scans WHERE id = ? AND user_id = ?", (record_id, session["user_id"]))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
