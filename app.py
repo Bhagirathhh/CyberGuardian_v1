@@ -1127,6 +1127,9 @@ def payment_callback():
         flash("Payment was not completed. Please try again.", "warning")
         return redirect(url_for('pricing'))
 
+@app.route('/healthz')
+def healthz():
+    return jsonify({"status": "healthy", "message": "Cyber Guardian is running!"}), 200
 
 # ===================== MAIN ROUTES =====================
 
